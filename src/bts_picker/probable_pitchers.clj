@@ -2,6 +2,9 @@
   (:require [clojure.string :as str]
             [java-time :as t] 
             [reaver :refer [parse extract-from attr text]]
+            [clj-http.client :as http-client]
+            [clojure.walk :refer [keywordize-keys]]
+            [clojure.xml :as xml]
             [clojure.tools.trace :refer :all]))
 
 (defn- iso-date->mlb-date
@@ -54,7 +57,23 @@
         (data->team-ids extraction-data)
         (data->game-ids extraction-data)))
 
+(def ^:private pitcher-base-url (str "http://gd2.mlb.com/components/game/mlb/year_" (t/format "YYYY" (t/local-date)) "/pitchers"))
+
+(defn- pitcher-url
+  [pitcher-id]
+  (str pitcher-base-url "/" pitcher-id ".xml"))
+
+(defn- supplement-pitcher-data
+  [probable-pitchers]
+  (mapv
+   (fn [pitcher]
+     (if-not (= :no-data (:pitcher-id pitcher))
+       (let [x (xml/parse (pitcher-url (:pitcher-id pitcher)))]
+         (merge pitcher (dissoc (:attrs x) :game_id :game_pk)))
+       pitcher))
+   probable-pitchers))
+
 (defn probable-pitchers
   ([] (probable-pitchers (t/format "YYYY-MM-dd" (t/local-date))))
-  ([date] (trace (transform-data (extract-data-from-page (get-probable-pitcher-page date))))))
+  ([date] (supplement-pitcher-data (transform-data (extract-data-from-page (get-probable-pitcher-page date))))))
 

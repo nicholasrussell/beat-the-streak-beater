@@ -52,4 +52,4 @@
 
 (defn games
   ([] (games (t/format "YYYY-MM-dd" (t/local-date))))
-  ([date] (trace (get-games date))))
+  ([date] (get-games date)))
