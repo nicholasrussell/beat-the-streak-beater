@@ -18,8 +18,8 @@
         p1ip (if (contains? p1 :s_ip) (read-string (:s_ip p1)) 0)
         p2h (if (contains? p2 :s_h) (read-string (:s_h p2)) 0)
         p2ip (if (contains? p2 :s_ip) (read-string (:s_ip p2)) 0)
-        p1r (if (> p1ip 0) (/ p1h p1ip) -1)
-        p2r (if (> p2ip 0) (/ p2h p2ip) -1)]
+        p1r (if (> p1ip 0) (/ p1h p1ip) 1)
+        p2r (if (> p2ip 0) (/ p2h p2ip) 1)]
     (compare p2r p1r)))
 
 (defn- rank-pitchers
