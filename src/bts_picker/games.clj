@@ -1,9 +1,5 @@
 (ns bts-picker.games
-  (:require [clojure.string :as str]
-            [java-time :as t]
-            [clj-http.client :as http-client]
-            [cheshire.core :as cheshire]
-            [clojure.walk :refer [keywordize-keys]]
+  (:require [bts-picker.util :as util]
             [clojure.tools.trace :refer :all]))
 
 (def ^:private base-url "http://gd2.mlb.com/components/game/mlb")
@@ -16,16 +12,13 @@
 
 (defn- scoreboard-url
   [date]
-  (let [[year month day] (str/split date #"\-")]
-    (str base-url
-         "/"
-         (format "year_%s/month_%s/day_%s" year month day)
-         "/"
-         (:scoreboard url-paths))))
+  (str base-url
+       (format "/year_%s/month_%s/day_%s/" (util/date->year date) (util/date->month date) (util/date->day date))
+       (:scoreboard url-paths)))
 
 (defn- scoreboard-data
   [date]
-  (keywordize-keys (cheshire/parse-string (:body (http-client/get (scoreboard-url date))))))
+  (util/get-json (scoreboard-url date)))
 
 (defn- make-team-name
   [game team]
@@ -51,5 +44,5 @@
     (mapv transform-game games)))
 
 (defn games
-  ([] (games (t/format "YYYY-MM-dd" (t/local-date))))
+  ([] (games (util/now)))
   ([date] (get-games date)))

@@ -1,15 +1,12 @@
 (ns bts-picker.colors
-  (:require [clojure.string :as str]
-            [clj-http.client :as http-client]
-            [cheshire.core :as cheshire]
-            [clojure.walk :refer [keywordize-keys]]
+  (:require [bts-picker.util :as util]
             [clojure.tools.trace :refer :all]))
 
 (def ^:private colors-url "https://raw.githubusercontent.com/jimniels/teamcolors/master/static/data/teams.json")
 
 (defn- get-team-color-data
   []
-  (keywordize-keys (cheshire/parse-string (:body (http-client/get colors-url)))))
+  (util/get-json colors-url))
 
 (defn team-colors
   [team-name]

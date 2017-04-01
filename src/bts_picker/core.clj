@@ -1,8 +1,8 @@
 (ns bts-picker.core
   (:require [clojure.tools.trace :refer :all]
-            [clojure.string :as str]
             [bts-picker.games]
-            [bts-picker.probable-pitchers]))
+            [bts-picker.probable-pitchers]
+            [bts-picker.batter-vs-pitcher]))
 
 (defn- pitchers-for-games
   [games probable-pitchers]
@@ -26,11 +26,16 @@
   [pitchers]
   (sort pitcher-heuristic pitchers))
 
+(defn- bvp
+  [date pitcher]
+  (bts-picker.batter-vs-pitcher/batter-vs-pitcher date (:team-id pitcher) (:pitcher-id pitcher)))
+
 (defn -main
   [& args]
-  (let [games (bts-picker.games/games "2017-04-03")
-        probable-pitchers (bts-picker.probable-pitchers/probable-pitchers "2017-04-03")
+  (let [date "2017-04-03"
+        games (bts-picker.games/games date)
+        probable-pitchers (bts-picker.probable-pitchers/probable-pitchers date)
         games-with-pitchers (pitchers-for-games games probable-pitchers)
-        worst-pitchers (trace (rank-pitchers probable-pitchers))]
-    games-with-pitchers))
+        worst-pitchers (rank-pitchers probable-pitchers)]
+    (trace (map (partial bvp date) worst-pitchers))))
     

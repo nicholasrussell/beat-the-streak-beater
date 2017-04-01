@@ -1,20 +1,13 @@
 (ns bts-picker.probable-pitchers
-  (:require [clojure.string :as str]
-            [java-time :as t] 
-            [reaver :refer [parse extract-from attr text]]
-            [clj-http.client :as http-client]
-            [clojure.walk :refer [keywordize-keys]]
+  (:require [bts-picker.util :as util]
+            [clojure.string :as str]
             [clojure.xml :as xml]
+            [reaver :refer [parse extract-from attr text]]
             [clojure.tools.trace :refer :all]))
 
-(defn- iso-date->mlb-date
-  [date]
-  (str/replace date #"\-" "/"))
-
 (defn- get-probable-pitcher-page
-  "Date format: YYYY/MM/DD"
   [date]
-  (slurp (str "http://mlb.mlb.com/news/probable_pitchers/index.jsp?c_id=mlb&date=" (iso-date->mlb-date date))))
+  (slurp (str "http://mlb.mlb.com/news/probable_pitchers/index.jsp?c_id=mlb&date=" (util/date->mlb-date date))))
 
 (defn- extract-data-from-page
   [page]
@@ -57,23 +50,23 @@
         (data->team-ids extraction-data)
         (data->game-ids extraction-data)))
 
-(def ^:private pitcher-base-url (str "http://gd2.mlb.com/components/game/mlb/year_" (t/format "YYYY" (t/local-date)) "/pitchers"))
+(def ^:private pitcher-base-url "http://gd2.mlb.com/components/game/mlb/year_%s/pitchers")
 
 (defn- pitcher-url
-  [pitcher-id]
-  (str pitcher-base-url "/" pitcher-id ".xml"))
+  [date pitcher-id]
+  (str (format pitcher-base-url (util/date->year date)) "/" pitcher-id ".xml"))
 
 (defn- supplement-pitcher-data
-  [probable-pitchers]
+  [date probable-pitchers]
   (mapv
    (fn [pitcher]
      (if-not (= :no-data (:pitcher-id pitcher))
-       (let [x (xml/parse (pitcher-url (:pitcher-id pitcher)))]
+       (let [x (xml/parse (pitcher-url date (:pitcher-id pitcher)))]
          (merge pitcher (dissoc (:attrs x) :game_id :game_pk)))
        pitcher))
    probable-pitchers))
 
 (defn probable-pitchers
-  ([] (probable-pitchers (t/format "YYYY-MM-dd" (t/local-date))))
-  ([date] (supplement-pitcher-data (transform-data (extract-data-from-page (get-probable-pitcher-page date))))))
+  ([] (probable-pitchers (util/now)))
+  ([date] (supplement-pitcher-data date (transform-data (extract-data-from-page (get-probable-pitcher-page date))))))
 
