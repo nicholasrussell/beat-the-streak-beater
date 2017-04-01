@@ -56,5 +56,5 @@
 
 (defn probable-pitchers
   ([] (probable-pitchers (t/format "YYYY-MM-dd" (t/local-date))))
-  ([date] (transform-data (extract-data-from-page (get-probable-pitcher-page date)))))
+  ([date] (trace (transform-data (extract-data-from-page (get-probable-pitcher-page date))))))
 
