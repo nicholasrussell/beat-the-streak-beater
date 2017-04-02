@@ -12,11 +12,11 @@
                             "&sport_code='mlb'"
                             "&cur_seas_sw='N'"))
 
-(defn get-bvp-url
+(defn- get-bvp-url
   [date team-id pitcher-id]
   (format bvp-url pitcher-id team-id (util/date->mlb-date date)))
 
-(defn parse-batter-data
+(defn- parse-batter-data
   [data]
   (let [batters (:row (:queryResults (:sit_bvp_5y_date data)))]
     batters))
