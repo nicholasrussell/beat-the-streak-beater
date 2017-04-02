@@ -13,9 +13,10 @@
   [page]
   (extract-from (parse page)
                 "div#mc"
-                [:pitcher-ids :throws :team-ids :game-ids]
+                [:pitcher-ids :throws :names :team-ids :game-ids]
                 "div.pitcher" (attr :pid)
                 "div.pitcher h5 span" text
+                "div.pitcher h5 a" text
                 "div.pitcher" (attr :tid)
                 "div.pitcher" (attr :gid)))
 
@@ -27,6 +28,10 @@
   [extraction-data]
   (:throws (first extraction-data)))
 
+(defn- data->names
+  [extraction-data]
+  (:names (first extraction-data)))
+
 (defn- data->team-ids
   [extraction-data]
   (:team-ids (first extraction-data)))
@@ -36,9 +41,10 @@
   (mapcat (partial repeat 2) (remove nil? (:game-ids (first extraction-data)))))
 
 (defn- make-probable-pitcher-map
-  [pitcher-id throws team-id game-id]
+  [pitcher-id throws name team-id game-id]
   {:pitcher-id pitcher-id
    :throws (if (= :no-data pitcher-id) :no-data throws)
+   :name (if (= :no-data pitcher-id) :no-data name)
    :team-id team-id
    :game-id game-id})
 
@@ -47,6 +53,7 @@
   (mapv make-probable-pitcher-map
         (data->pitcher-ids extraction-data)
         (data->throws extraction-data)
+        (data->names extraction-data)
         (data->team-ids extraction-data)
         (data->game-ids extraction-data)))
 

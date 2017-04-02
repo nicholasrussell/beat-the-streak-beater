@@ -6,21 +6,27 @@
 
 (def ^:private bvp-url (str base-url
                             "?vs_pitcher_id=%s"
-                            "&game_type=%27R%27"
+                            "&game_type='R'"
                             "&team_id=%s"
-                            "&date_num=%27%s%27"
-                            "&sport_code=%27mlb%27"
-                            "&cur_seas_sw=%27N%27"))
+                            "&date_num='%s'"
+                            "&sport_code='mlb'"
+                            "&cur_seas_sw='N'"))
 
 (defn get-bvp-url
   [date team-id pitcher-id]
-  (format (trace bvp-url) pitcher-id team-id (trace (util/date->mlb-date date))))
+  (format bvp-url pitcher-id team-id (util/date->mlb-date date)))
+
+(defn parse-batter-data
+  [data]
+  (let [batters (:row (:queryResults (:sit_bvp_5y_date data)))]
+    batters))
 
 (defn- get-data
   [date team-id pitcher-id]
   (let [raw-data (util/get-json (get-bvp-url date team-id pitcher-id))]
-    raw-data))
+    {:pitcher-id pitcher-id
+     :batters (parse-batter-data raw-data)}))
 
 (defn batter-vs-pitcher
   ([team-id pitcher-id] (batter-vs-pitcher (util/now) team-id pitcher-id))
-  ([date team-id pitcher-id] (trace (get-data date team-id pitcher-id))))
+  ([date team-id pitcher-id] (get-data date team-id pitcher-id)))
