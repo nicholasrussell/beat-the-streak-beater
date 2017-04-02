@@ -2,6 +2,7 @@
   (:require [clojure.tools.trace :refer :all]
             [clojure.pprint :as pprint]
             [clojure.string :as str]
+            [bts-picker.util :as util]
             [bts-picker.games]
             [bts-picker.probable-pitchers]
             [bts-picker.batter-vs-pitcher]
@@ -188,7 +189,7 @@
 
 (defn -main
   [& args]
-  (let [date "2017-04-02"
+  (let [date (util/now)
         games (bts-picker.games/games date)
         probable-pitchers (bts-picker.probable-pitchers/probable-pitchers date)
         games-with-pitchers (pitchers-for-games games probable-pitchers)
