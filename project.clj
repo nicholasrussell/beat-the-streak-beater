@@ -1,4 +1,4 @@
-(defproject bts-picker "0.1.0-SNAPSHOT"
+(defproject bts-picker "0.1.0"
   :description "A tool to make MLB Beat the Streak picks for me"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
