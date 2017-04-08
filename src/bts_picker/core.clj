@@ -6,6 +6,7 @@
             [bts-picker.games]
             [bts-picker.probable-pitchers]
             [bts-picker.batter-vs-pitcher]
+            [bts-picker.season-batters]
             [bts-picker.weather]))
 
 (defn- pitchers-for-games
@@ -16,68 +17,101 @@
        (assoc game :probable-pitchers pitchers)))
    games))
 
-(defn- safe-hits
-  [pitcher]
-  (if (and (contains? pitcher :s_h) (not (str/blank? (:s_h pitcher))))
-    (read-string (:s_h pitcher))
+(defn- safe-stat
+  [player stat]
+  (if (and (contains? player stat) (not (str/blank? (stat player))))
+    (read-string (stat player))
     0))
 
-(defn- safe-ip
+(defn- safe-ratio
+  [num denom]
+  (if (> denom 0)
+    (double (/ num denom))
+    0.0))
+
+(defn- safe-hits
+  [player]
+  (safe-stat player :h))
+
+(defn- safe-ab
+  [player]
+ (safe-stat player :ab))
+
+(defn- safe-s-ip
+  [player]
+  (safe-stat player :s_ip))
+
+(defn- safe-s-hits
+  [player]
+  (safe-stat player :s_h))
+
+(defn- safe-s-ab
+  [player]
+  (safe-stat player :s_ab))
+
+(defn- calculate-sh-sip-ratio
   [pitcher]
-  (if (and (contains? pitcher :s_ip) (not (str/blank? (:s_ip pitcher))))
-    (read-string (:s_ip pitcher))
-    0))
+  (let [h (safe-s-hits pitcher)
+        ip (safe-s-ip pitcher)]
+    {:s-h h
+     :s-ip ip
+     :ratio (safe-ratio h ip)}))
 
 (defn- pitcher-heuristic
-  [p1 p2]
-  (let [p1h (safe-hits p1)
-        p1ip (safe-ip p1)
-        p2h (safe-hits p2)
-        p2ip (safe-ip p2)
-        p1r (if (> p1ip 0) (/ p1h p1ip) 0)
-        p2r (if (> p2ip 0) (/ p2h p2ip) 0)]
-    (compare p2r p1r)))
+  [pitcher]
+  (let [sh-sip-ratio (calculate-sh-sip-ratio pitcher)]
+    (:ratio sh-sip-ratio)))
 
 (defn- rank-pitchers
   [pitchers]
-  (sort pitcher-heuristic pitchers))
+  (sort #(compare (pitcher-heuristic %2) (pitcher-heuristic %1)) pitchers))
 
-(defn- safe-b-hits
+(defn- calculate-bvp-h-ab-ratio
   [batter]
-  (if (and (contains? batter :h) (not (str/blank? (:h batter))))
-    (read-string (:h batter))
-    0))
+  (let [h (safe-hits batter)
+        ab (safe-ab batter)]
+    {:bvp-h h
+     :bvp-ab ab
+     :ratio (safe-ratio h ab)}))
 
-(defn- safe-ab
+(defn- calculate-season-h-ab-ratio
   [batter]
-  (if (and (contains? batter :ab) (not (str/blank? (:ab batter))))
-    (read-string (:ab batter))
-    0))
+  (let [h (safe-s-hits batter)
+        ab (safe-s-ab batter)]
+    {:s-h h
+     :s-ab ab
+     :ratio (safe-ratio h ab)}))
 
-(defn- bvp-heuristic
+(defn- batter-heuristic
+  [batter]
+  (let [bvp-h-ab-ratio (calculate-bvp-h-ab-ratio (:bvp batter))
+        sh-sab-ratio (calculate-season-h-ab-ratio batter)]
+    {:bvp bvp-h-ab-ratio
+     :season sh-sab-ratio}))
+
+(defn- batter-compare
   [b1 b2]
-  (let [b1h (safe-b-hits b1)
-        b1ab (safe-ab b1)
-        b2h (safe-b-hits b2)
-        b2ab (safe-ab b2)
-        b1avg (if (> b1ab 0) (/ b1h b1ab) 0)
-        b2avg (if (> b2ab 0) (/ b2h b2ab) 0)]
-    (compare b2avg b1avg)))
+  (let [b1-data (batter-heuristic b1)
+        b2-data (batter-heuristic b2)
+        bvp-compare (compare (:ratio (:bvp b2-data)) (:ratio (:bvp b1-data)))]
+    (if (= bvp-compare 0)
+      (compare (:ratio (:season b2-data)) (:ratio (:season b1-data)))
+      bvp-compare)))
 
-(defn- rank-bvp
+(defn- rank-batters
   [batters]
-  (sort bvp-heuristic batters))
+  (sort batter-compare batters))
 
 (defn- bvp-data
   [date pitcher]
   (let [bvp (bts-picker.batter-vs-pitcher/batter-vs-pitcher date (:team-id pitcher) (:pitcher-id pitcher))]
     {:pitcher pitcher
-     :batters (rank-bvp (:batters bvp))}))
+     :batters (:batters bvp)}))
 
-(defn- rank-batters
-  [games pitchers bvp]
-  (let [all-batters (reduce (fn [acc cur] (concat acc (map #(assoc % :pitcher-id (:pitcher-id (:pitcher cur))) (:batters cur)))) [] bvp)]
-    (into [] (rank-bvp all-batters))))
+(defn- all-batter-stats-from-bvp
+  [date bvp]
+  (let [all-bvp-batters (reduce (fn [acc cur] (concat acc (map #(assoc % :pitcher-id (:pitcher-id (:pitcher cur))) (:batters cur)))) [] bvp)]
+    (map #(assoc (bts-picker.season-batters/batter-season date (:player_id %)) :bvp %) all-bvp-batters)))
 
 ;; TODO combine team-name-for-id and opposing-team-name-for-id
 (defn- team-name-for-id
@@ -144,9 +178,9 @@
         table-data (map
                     (fn [[idx pitcher]]
                       (let [rank (+ idx 1)
-                            h (safe-hits pitcher)
-                            ip (safe-ip pitcher)
-                            ratio (format "%.2f" (if (> ip 0) (double (/ h ip)) 0.0))]
+                            h (safe-s-hits pitcher)
+                            ip (safe-s-ip pitcher)
+                            ratio (format "%.2f" (:ratio (calculate-sh-sip-ratio pitcher)))]
                         {:rank rank
                          :name (:name pitcher)
                          :id (:pitcher-id pitcher)
@@ -166,21 +200,27 @@
         table-data (map
                     (fn [[idx batter]]
                       (let [rank (+ idx 1)
-                            h (safe-b-hits batter)
-                            ab (safe-ab batter)
-                            ratio (format "%.3f" (if (> ab 0) (double (/ h ab)) 0.0))]
+                            bvp-data (calculate-bvp-h-ab-ratio (:bvp batter))
+                            bvp-h (:bvp-h bvp-data)
+                            bvp-ab (:bvp-ab bvp-data)
+                            bvp-h-ab-ratio (format "%.3f" (:ratio bvp-data))
+                            season-data (calculate-season-h-ab-ratio batter)
+                            s-h (:s-h season-data)
+                            s-ab (:s-ab season-data)
+                            s-h-ab-ratio (format "%.3f" (:ratio season-data))]
                         {:rank rank
-                         :name (:player_first_last batter)
-                         :id (:player_id batter)
-                         :opposing-pitcher (pitcher-name-for-id pitchers (:pitcher-id batter))
-                         :team (team-name-for-id games (:team_id batter))
-                         :opposing-team (opposing-team-name-for-id games (:team_id batter))
-                         :location (venue-location-for-team-id games (:team_id batter))
-                         :bvp_hits h
-                         :bvp_ab ab
-                         :ratio ratio}))
+                         :name (:player_first_last (:bvp batter))
+                         :id (:player_id (:bvp batter))
+                         :opposing-pitcher (pitcher-name-for-id pitchers (:pitcher-id (:bvp batter)))
+                         :team (team-name-for-id games (:team_id (:bvp batter)))
+                         :bvp-hits bvp-h
+                         :bvp-ab bvp-ab
+                         :bvp-ratio bvp-h-ab-ratio
+                         :s-hits s-h
+                         :s-ab s-ab
+                         :s-ratio s-h-ab-ratio}))
                     idx-batter)]
-    (pprint/print-table [:rank :name :id :opposing-pitcher :team :opposing-team :location :bvp_hits :bvp_ab :ratio] table-data)))
+    (pprint/print-table [:rank :name :id :opposing-pitcher :team :bvp-hits :bvp-ab :bvp-ratio :s-hits :s-ab :s-ratio] table-data)))
 
 (defn- print-weather-data
   [weather-data]
@@ -195,7 +235,8 @@
         games-with-pitchers (pitchers-for-games games probable-pitchers)
         worst-pitchers (rank-pitchers probable-pitchers)
         bvp (map (partial bvp-data date) worst-pitchers)
-        best-batters (rank-batters games worst-pitchers bvp)
+        batters (all-batter-stats-from-bvp date bvp)
+        best-batters (rank-batters batters)
         weather (game-weather-data games)]
     (print-weather-data weather)
     (println)
