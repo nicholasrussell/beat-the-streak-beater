@@ -34,7 +34,8 @@
 
 (defn- data->team-ids
   [extraction-data]
-  (:team-ids (first extraction-data)))
+  ;; probable pitchers has home and away team ids mixed up
+  (mapcat reverse (partition 2 (:team-ids (first extraction-data)))))
 
 (defn- data->game-ids
   [extraction-data]
