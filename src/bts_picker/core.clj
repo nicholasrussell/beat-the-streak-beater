@@ -7,6 +7,7 @@
             [bts-picker.probable-pitchers]
             [bts-picker.batter-vs-pitcher]
             [bts-picker.season-batters]
+            [bts-picker.daily-batters]
             [bts-picker.weather]))
 
 (defn- pitchers-for-games
@@ -82,12 +83,22 @@
      :s-ab ab
      :ratio (safe-ratio h ab)}))
 
+(defn- calculate-last-7-h-ab-ratio
+  [batter]
+  (let [h (:h batter)
+        ab (:ab batter)]
+    {:last-7-h h
+     :last-7-ab ab
+     :ratio (safe-ratio h ab)}))
+
 (defn- batter-heuristic
   [batter]
   (let [bvp-h-ab-ratio (calculate-bvp-h-ab-ratio (:bvp batter))
-        sh-sab-ratio (calculate-season-h-ab-ratio batter)]
+        sh-sab-ratio (calculate-season-h-ab-ratio batter)
+        last-7-h-ab-ratio (calculate-last-7-h-ab-ratio (:last-7 batter))]
     {:bvp bvp-h-ab-ratio
-     :season sh-sab-ratio}))
+     :season sh-sab-ratio
+     :last-7 last-7-h-ab-ratio}))
 
 (defn- batter-compare
   [b1 b2]
@@ -95,7 +106,10 @@
         b2-data (batter-heuristic b2)
         bvp-compare (compare (:ratio (:bvp b2-data)) (:ratio (:bvp b1-data)))]
     (if (= bvp-compare 0)
-      (compare (:ratio (:season b2-data)) (:ratio (:season b1-data)))
+      (let [last-7-compare (compare (:ratio (:last-7 b2-data)) (:ratio (:last-7 b1-data)))]
+        (if (= last-7-compare 0)
+          (compare (:ratio (:season b2-data)) (:ratio (:season b1-data)))
+          last-7-compare))
       bvp-compare)))
 
 (defn- rank-batters
@@ -112,6 +126,27 @@
   [date bvp]
   (let [all-bvp-batters (reduce (fn [acc cur] (concat acc (map #(assoc % :pitcher-id (:pitcher-id (:pitcher cur))) (:batters cur)))) [] bvp)]
     (map #(assoc (bts-picker.season-batters/batter-season date (:player_id %)) :bvp %) all-bvp-batters)))
+
+(defn- last-n-days-batter-data
+  [date batter n]
+  (pmap
+   (fn [n-day-ago] (bts-picker.daily-batters/daily-batters (util/n-days-ago date n-day-ago) (:id batter)))
+   (range 1 (+ n 1))))
+
+(defn- all-batter-stats
+  [date batters]
+  (pmap
+   (fn [batter]
+     (let [last-7-days (reduce (fn [acc cur]
+                                 {:h (+ (:h acc) (:h cur))
+                                  :ab (+ (:ab acc) (:ab cur))
+                                  :bb (+ (:bb acc) (:bb cur))})
+                               {:h 0 :ab 0 :bb 0}
+                               (last-n-days-batter-data date batter 7))]
+       (assoc batter
+              :last-7
+              last-7-days)))
+   batters))
 
 ;; TODO combine team-name-for-id and opposing-team-name-for-id
 (defn- team-name-for-id
@@ -204,23 +239,30 @@
                             bvp-h (:bvp-h bvp-data)
                             bvp-ab (:bvp-ab bvp-data)
                             bvp-h-ab-ratio (format "%.3f" (:ratio bvp-data))
+                            l7-data (calculate-last-7-h-ab-ratio (:last-7 batter))
+                            l7-h (:last-7-h l7-data)
+                            l7-ab (:last-7-ab l7-data)
+                            l7-ratio (format "%.3f" (:ratio l7-data))
                             season-data (calculate-season-h-ab-ratio batter)
                             s-h (:s-h season-data)
                             s-ab (:s-ab season-data)
                             s-h-ab-ratio (format "%.3f" (:ratio season-data))]
                         {:rank rank
                          :name (:player_first_last (:bvp batter))
-                         :id (:player_id (:bvp batter))
+                         ;:id (:player_id (:bvp batter))
                          :opposing-pitcher (pitcher-name-for-id pitchers (:pitcher-id (:bvp batter)))
                          :team (team-name-for-id games (:team_id (:bvp batter)))
                          :bvp-hits bvp-h
                          :bvp-ab bvp-ab
                          :bvp-ratio bvp-h-ab-ratio
+                         :l7-hits l7-h
+                         :l7-ab l7-ab
+                         :l7-ratio l7-ratio
                          :s-hits s-h
                          :s-ab s-ab
                          :s-ratio s-h-ab-ratio}))
                     idx-batter)]
-    (pprint/print-table [:rank :name :id :opposing-pitcher :team :bvp-hits :bvp-ab :bvp-ratio :s-hits :s-ab :s-ratio] table-data)))
+    (pprint/print-table [:rank :name :opposing-pitcher :team :bvp-hits :bvp-ab :bvp-ratio :l7-hits :l7-ab :l7-ratio :s-hits :s-ab :s-ratio] table-data)))
 
 (defn- print-weather-data
   [weather-data]
@@ -235,7 +277,7 @@
         games-with-pitchers (pitchers-for-games games probable-pitchers)
         worst-pitchers (rank-pitchers probable-pitchers)
         bvp (map (partial bvp-data date) worst-pitchers)
-        batters (all-batter-stats-from-bvp date bvp)
+        batters (all-batter-stats date (all-batter-stats-from-bvp date bvp))
         best-batters (rank-batters batters)
         weather (game-weather-data games)]
     (print-weather-data weather)

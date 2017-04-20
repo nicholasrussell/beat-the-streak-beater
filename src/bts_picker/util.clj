@@ -25,11 +25,19 @@
 
 (defn- date->iso-date
   [date]
-  (t/format "YYYY-MM-dd" date))
+  (t/format "yyyy-MM-dd" date))
+
+(defn- iso-date->date
+  [date]
+  (t/local-date "yyyy-MM-dd" date))
 
 (defn date->mlb-date
   [date]
   (str/replace date #"\-" "/"))
+
+(defn n-days-ago
+  [date n]
+  (date->iso-date (t/minus (iso-date->date date) (t/days n))))
 
 (defn now
   []
