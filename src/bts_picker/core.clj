@@ -116,39 +116,18 @@
   [batters]
   (sort batter-compare batters))
 
-(defn- bvp-data
-  [date pitcher]
-  (let [bvp (bts-picker.batter-vs-pitcher/batter-vs-pitcher date (:team-id pitcher) (:pitcher-id pitcher))]
-    {:pitcher pitcher
-     :batters (:batters bvp)}))
+;; TODO combine these
+(defn- opposing-team-id-for-id
+  [games team-id]
+  (reduce
+   (fn [acc cur]
+     (condp = team-id
+       (:home-team-id cur) (reduced (:away-team-id cur))
+       (:away-team-id cur) (reduced (:home-team-id cur))
+       acc))
+   team-id
+   games))
 
-(defn- all-batter-stats-from-bvp
-  [date bvp]
-  (let [all-bvp-batters (reduce (fn [acc cur] (concat acc (map #(assoc % :pitcher-id (:pitcher-id (:pitcher cur))) (:batters cur)))) [] bvp)]
-    (map #(assoc (bts-picker.season-batters/batter-season date (:player_id %)) :bvp %) all-bvp-batters)))
-
-(defn- last-n-days-batter-data
-  [date batter n]
-  (pmap
-   (fn [n-day-ago] (bts-picker.daily-batters/daily-batters (util/n-days-ago date n-day-ago) (:id batter)))
-   (range 1 (+ n 1))))
-
-(defn- all-batter-stats
-  [date batters]
-  (pmap
-   (fn [batter]
-     (let [last-7-days (reduce (fn [acc cur]
-                                 {:h (+ (:h acc) (:h cur))
-                                  :ab (+ (:ab acc) (:ab cur))
-                                  :bb (+ (:bb acc) (:bb cur))})
-                               {:h 0 :ab 0 :bb 0}
-                               (last-n-days-batter-data date batter 7))]
-       (assoc batter
-              :last-7
-              last-7-days)))
-   batters))
-
-;; TODO combine team-name-for-id and opposing-team-name-for-id
 (defn- team-name-for-id
   [games team-id]
   (let [name-or-id (fn [name id] (if (str/blank? name) id name))]
@@ -196,9 +175,41 @@
    pitcher-id
    pitchers))
 
+(defn- bvp-data
+  [date games pitcher]
+  (let [bvp (bts-picker.batter-vs-pitcher/batter-vs-pitcher date (opposing-team-id-for-id games (:team-id pitcher)) (:pitcher-id pitcher))]
+    {:pitcher pitcher
+     :batters (:batters bvp)}))
+
+(defn- all-batter-stats-from-bvp
+  [date bvp]
+  (let [all-bvp-batters (reduce (fn [acc cur] (concat acc (map #(assoc % :pitcher-id (:pitcher-id (:pitcher cur))) (:batters cur)))) [] bvp)]
+    (pmap #(assoc (bts-picker.season-batters/batter-season date (:player_id %)) :bvp %) all-bvp-batters)))
+
+(defn- last-n-days-batter-data
+  [date batter n]
+  (pmap
+   (fn [n-day-ago] (bts-picker.daily-batters/daily-batters (util/n-days-ago date n-day-ago) (:id batter)))
+   (range 1 (+ n 1))))
+
+(defn- all-batter-stats
+  [date batters]
+  (pmap
+   (fn [batter]
+     (let [last-7-days (reduce (fn [acc cur]
+                                 {:h (+ (:h acc) (:h cur))
+                                  :ab (+ (:ab acc) (:ab cur))
+                                  :bb (+ (:bb acc) (:bb cur))})
+                               {:h 0 :ab 0 :bb 0}
+                               (last-n-days-batter-data date batter 7))]
+       (assoc batter
+              :last-7
+              last-7-days)))
+   batters))
+
 (defn- game-weather-data
   [games]
-  (map
+  (pmap
    (fn [game]
      (let [loc (:venue-location game)]
        (assoc (bts-picker.weather/weather-for-location (:venue-location game))
@@ -276,7 +287,7 @@
         probable-pitchers (bts-picker.probable-pitchers/probable-pitchers date)
         games-with-pitchers (pitchers-for-games games probable-pitchers)
         worst-pitchers (rank-pitchers probable-pitchers)
-        bvp (map (partial bvp-data date) worst-pitchers)
+        bvp (pmap (partial bvp-data date games) worst-pitchers)
         batters (all-batter-stats date (all-batter-stats-from-bvp date bvp))
         best-batters (rank-batters batters)
         weather (game-weather-data games)]
