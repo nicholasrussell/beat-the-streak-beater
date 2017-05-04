@@ -23,9 +23,11 @@
 
 (defn- get-data
   [date team-id pitcher-id]
-  (let [raw-data (util/get-json (get-bvp-url date team-id pitcher-id))]
-    {:pitcher-id pitcher-id
-     :batters (parse-batter-data raw-data)}))
+  (if (= pitcher-id :no-data)
+    {}
+    (let [raw-data (util/get-json (get-bvp-url date team-id pitcher-id))]
+      {:pitcher-id pitcher-id
+       :batters (parse-batter-data raw-data)})))
 
 (defn batter-vs-pitcher
   ([team-id pitcher-id] (batter-vs-pitcher (util/now) team-id pitcher-id))
