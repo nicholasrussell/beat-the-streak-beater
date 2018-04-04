@@ -1,0 +1,15 @@
+(ns bts-picker.mlb-api.person.core
+  (:require [bts-picker.mlb-api.client.core :as client]))
+
+(def ^:private path-people "/v1/people")
+(def ^:private path-person (str path-people "/%s"))
+(def ^:private path-game-stats (str path-person "/stats/game/%s"))
+
+(defn get-person
+  [person-id & {:keys []}]
+  (client/get (format path-person person-id)))
+
+(defn get-person-game-stats
+  [person-id game-pk & {:keys [group]}]
+  (client/get (format path-game-stats person-id game-pk)
+              {:query-params (when group {:group group})}))

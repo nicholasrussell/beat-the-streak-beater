@@ -1,0 +1,13 @@
+(ns bts-picker.mlb-api.season.core
+  (:require [bts-picker.mlb-api.client.core :as client]))
+
+(def ^:private path-seasons "/v1/seasons")
+(def ^:private path-season (str path-seasons "/%s"))
+
+(defn get-seasons
+  [& {:keys [sport-id] :or {sport-id 1}}]
+  (client/get path-seasons {:query-params {:sportId sport-id}}))
+
+(defn get-season
+  [season-id & {:keys [sport-id] :or {sport-id 1}}]
+  (client/get (format path-season season-id) {:query-params {:sportId sport-id}}))
