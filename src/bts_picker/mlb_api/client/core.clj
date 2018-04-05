@@ -4,7 +4,7 @@
             [clojure.tools.trace :as trace]
             [clojure.spec.alpha :as s]))
 
-(def ^:private debug true)
+(def ^:private debug false)
 (def ^:private base-url-stats-api "http://statsapi.mlb.com/api")
 
 (defn- make-stats-api-url
@@ -20,8 +20,8 @@
      (http-client/get
        (make-stats-api-url path)
        {:query-params query-params
-        :as           :json
-        :debug        debug})
+        :as :json
+        :debug debug})
      :body)))
 
 (s/fdef get-stats-api
