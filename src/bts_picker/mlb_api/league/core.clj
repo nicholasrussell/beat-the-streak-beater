@@ -5,5 +5,5 @@
 (def ^:private path-league (str path-leagues "/%s"))
 
 (defn get-league
-  [league-id & {:keys []}]
+  [league-id]
   (client/get (format path-league league-id)))

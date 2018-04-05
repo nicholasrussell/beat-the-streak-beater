@@ -11,24 +11,30 @@
 (def ^:private path-roster (str path-rosters "/%s"))
 
 (defn get-teams
-  [& {:keys [sport-ids] :or {sport-ids [1]}}]
-  (client/get path-teams {:query-params {:sportIds sport-ids}}))
+  ([]
+   (get-teams {}))
+  ([{:keys [sport-ids] :or {sport-ids [1]}}]
+   (client/get path-teams {:query-params {:sportIds sport-ids}})))
 
 (defn get-team
-  [team-id & {:keys []}]
-  (client/get (format path-team team-id)))
+  ([team-id]
+   (get-team team-id))
+  ([team-id]
+   (client/get (format path-team team-id))))
 
 (defn get-coaches
-  [team-id & {:keys []}]
+  [team-id]
   (client/get (format path-coaches team-id)))
 
 (defn get-leaders
-  [team-id & {:keys []}]
+  [team-id]
   (client/get (format path-leaders team-id)))
 
 (defn get-roster
-  [team-id & {:keys [roster-type]}]
-  (client/get
-    (if roster-type
-      (format path-roster team-id roster-type)
-      (format path-rosters team-id))))
+  ([team-id]
+   (get-roster team-id {}))
+  ([team-id {:keys [roster-type]}]
+   (client/get
+     (if roster-type
+       (format path-roster team-id roster-type)
+       (format path-rosters team-id)))))

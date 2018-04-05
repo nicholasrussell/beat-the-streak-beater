@@ -6,10 +6,12 @@
 (def ^:private path-game-stats (str path-person "/stats/game/%s"))
 
 (defn get-person
-  [person-id & {:keys []}]
+  [person-id]
   (client/get (format path-person person-id)))
 
 (defn get-person-game-stats
-  [person-id game-pk & {:keys [group]}]
-  (client/get (format path-game-stats person-id game-pk)
-              {:query-params (when group {:group group})}))
+  ([person-id game-pk]
+   (get-person-game-stats person-id game-pk {}))
+  ([person-id game-pk {:keys [group]}]
+   (client/get (format path-game-stats person-id game-pk)
+               {:query-params {:group group}})))

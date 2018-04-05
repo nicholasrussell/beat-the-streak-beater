@@ -5,9 +5,9 @@
 (def ^:private path-venue (str path-venues "/%s"))
 
 (defn get-venues
-  [& {:keys []}]
+  []
   (client/get path-venues))
 
 (defn get-venue
-  [venue-id & {:keys []}]
+  [venue-id]
   (client/get (format path-venue venue-id)))

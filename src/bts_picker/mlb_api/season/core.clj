@@ -5,9 +5,13 @@
 (def ^:private path-season (str path-seasons "/%s"))
 
 (defn get-seasons
-  [& {:keys [sport-id] :or {sport-id 1}}]
-  (client/get path-seasons {:query-params {:sportId sport-id}}))
+  ([]
+   (get-seasons {}))
+  ([{:keys [sport-id] :or {sport-id 1}}]
+   (client/get path-seasons {:query-params {:sportId sport-id}})))
 
 (defn get-season
-  [season-id & {:keys [sport-id] :or {sport-id 1}}]
-  (client/get (format path-season season-id) {:query-params {:sportId sport-id}}))
+  ([season-id]
+   (get-season season-id))
+  ([season-id {:keys [sport-id] :or {sport-id 1}}]
+   (client/get (format path-season season-id) {:query-params {:sportId sport-id}})))

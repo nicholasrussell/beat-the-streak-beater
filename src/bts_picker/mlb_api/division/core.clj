@@ -5,10 +5,12 @@
 (def ^:private path-division (str path-divisions "/%s"))
 
 (defn get-divisions
-  [& {:keys [sport-id]}]
-  (client/get path-divisions
-              {:query-params (when sport-id {:sportId sport-id})}))
+  ([]
+   (get-divisions {}))
+  ([{:keys [sport-id]}]
+   (client/get path-divisions
+               {:query-params (when sport-id {:sportId sport-id})})))
 
 (defn get-division
-  [division-id & {:keys []}]
+  [division-id]
   (client/get (format path-division division-id)))
