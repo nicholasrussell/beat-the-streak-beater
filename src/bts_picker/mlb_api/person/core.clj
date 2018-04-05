@@ -5,6 +5,10 @@
 (def ^:private path-person (str path-people "/%s"))
 (def ^:private path-game-stats (str path-person "/stats/game/%s"))
 
+(defn get-people
+  [person-ids]
+  (client/get-stats-api path-people {:query-params {:personIds person-ids}}))
+
 (defn get-person
   [person-id]
   (client/get-stats-api (format path-person person-id)))

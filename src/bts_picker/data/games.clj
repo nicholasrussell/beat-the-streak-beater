@@ -9,7 +9,7 @@
 
 (defn- transform-schedule-to-game-ids
   [schedule-data]
-  (map game-id (some-> schedule-data :dates first :games)))
+  (some->> schedule-data :dates first :games (map game-id)))
 
 (defn- transform-game-data-status
   [status]
@@ -31,19 +31,24 @@
    :away (some-> probable-pitchers :away :id str)})
 
 (defn- transform-game-data-team
+  [team]
+  (let [team (select-keys team [:id :name])]
+    {:id (some-> team :id str)
+     :name (some-> team :name)}))
+
+(defn- transform-game-data-teams
   [teams]
-  {:home (some-> teams :home (select-keys [:id :name]))
-   :away (some-> teams :away (select-keys [:id :name]))})
+  {:home (some-> teams :home transform-game-data-team)
+   :away (some-> teams :away transform-game-data-team)})
 
 (defn- transform-game-data-player
   [player]
   {:id (some-> player :id str)
    :name (some-> player :fullName)})
 
-
 (defn- transform-game-data-players
   [players]
-  (map transform-game-data-player (filter :active (some-> players vals))))
+  (map transform-game-data-player (some->> players vals (filter :active))))
 
 (defn- transform-game-data
   [game]
@@ -54,7 +59,7 @@
      :venue (some-> game-data :venue transform-game-data-venue)
      :weather (some-> game-data :weather)
      :probable-pitchers (some-> game-data :probablePitchers transform-game-data-probable-pitchers)
-     :teams (some-> game-data :teams transform-game-data-team)
+     :teams (some-> game-data :teams transform-game-data-teams)
      :players (some-> game-data :players transform-game-data-players)}))
 
 (defn get-games
