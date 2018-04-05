@@ -16,35 +16,35 @@
   ([game-pk]
    (get-live-feed game-pk {}))
   ([game-pk {:keys [timecode]}]
-   (client/get (format path-live-feed game-pk) {:query-params {:timecode timecode}})))
+   (client/get-stats-api (format path-live-feed game-pk) {:query-params {:timecode timecode}})))
 
 (defn get-live-feed-diff-patch
   ([game-pk]
-   (client/get game-pk {}))
+   (client/get-stats-api game-pk {}))
   ([game-pk {:keys [start-timecode end-timecode]}]
-   (client/get (format path-live-feed-diff-patch game-pk)
-               {:query-params {:startTimecode start-timecode :endTimecode end-timecode}})))
+   (client/get-stats-api (format path-live-feed-diff-patch game-pk)
+                         {:query-params {:startTimecode start-timecode :endTimecode end-timecode}})))
 
 (defn get-live-feed-timestamps
   [game-pk]
-  (client/get (format path-live-feed-timestamps game-pk)))
+  (client/get-stats-api (format path-live-feed-timestamps game-pk)))
 
 (defn get-context-metrics
   [game-pk]
-  (client/get (format path-context-metrics game-pk)))
+  (client/get-stats-api (format path-context-metrics game-pk)))
 
 (defn get-win-probability
   [game-pk]
-  (client/get (format path-win-probability game-pk)))
+  (client/get-stats-api (format path-win-probability game-pk)))
 
 (defn get-box-score
   [game-pk]
-  (client/get (format path-box-score game-pk)))
+  (client/get-stats-api (format path-box-score game-pk)))
 
 (defn get-line-score
   [game-pk]
-  (client/get (format path-line-score game-pk)))
+  (client/get-stats-api (format path-line-score game-pk)))
 
 (defn get-play-by-play
   [game-pk]
-  (client/get (format path-play-by-play game-pk)))
+  (client/get-stats-api (format path-play-by-play game-pk)))

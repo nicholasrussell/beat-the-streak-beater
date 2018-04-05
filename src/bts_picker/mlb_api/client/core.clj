@@ -5,26 +5,26 @@
             [clojure.spec.alpha :as s]))
 
 (def ^:private debug true)
-(def ^:private base-url "http://statsapi.mlb.com/api")
+(def ^:private base-url-stats-api "http://statsapi.mlb.com/api")
 
-(defn- make-url
+(defn- make-stats-api-url
   [path]
-  (format "%s/%s" base-url path))
+  (format "%s/%s" base-url-stats-api path))
 
-(defn get
+(defn get-stats-api
   ([path]
-   (get path {}))
+   (get-stats-api path {}))
   ([path {:keys [query-params]}]
     ; TODO handle exceptions
    (some->
      (http-client/get
-       (make-url path)
+       (make-stats-api-url path)
        {:query-params query-params
         :as           :json
         :debug        debug})
      :body)))
 
-(s/fdef get
+(s/fdef get-stats-api
         :args (s/or :path (s/cat :path string?)
                     :path-options (s/cat :path string?
                                          :options map?))

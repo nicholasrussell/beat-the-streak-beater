@@ -6,8 +6,8 @@
 
 (defn get-sports
   []
-  (client/get path-sports))
+  (client/get-stats-api path-sports))
 
 (defn get-sport
   [sport-id]
-  (client/get (format path-sport sport-id)))
+  (client/get-stats-api (format path-sport sport-id)))

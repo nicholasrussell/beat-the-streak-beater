@@ -15,44 +15,44 @@
 
 (defn get-game-statuses
   []
-  (client/get path-game-statuses))
+  (client/get-stats-api path-game-statuses))
 
 (defn get-game-types
   []
-  (client/get path-game-types))
+  (client/get-stats-api path-game-types))
 
 (defn get-league-leader-types
   []
-  (client/get path-league-leader-types))
+  (client/get-stats-api path-league-leader-types))
 
 (defn get-metrics
   []
-  (client/get path-metrics))
+  (client/get-stats-api path-metrics))
 
 (defn get-positions
   []
-  (client/get path-positions))
+  (client/get-stats-api path-positions))
 
 (defn get-roster-types
   []
-  (client/get path-roster-types))
+  (client/get-stats-api path-roster-types))
 
 (defn get-schedule-event-types
   []
-  (client/get path-schedule-event-types))
+  (client/get-stats-api path-schedule-event-types))
 
 (defn get-situation-codes
   []
-  (client/get path-situation-codes))
+  (client/get-stats-api path-situation-codes))
 
 (defn get-standings-types
   []
-  (client/get path-standings-types))
+  (client/get-stats-api path-standings-types))
 
 (defn get-stat-groups
   []
-  (client/get path-stat-groups))
+  (client/get-stats-api path-stat-groups))
 
 (defn get-stat-types
   []
-  (client/get path-stat-types))
+  (client/get-stats-api path-stat-types))

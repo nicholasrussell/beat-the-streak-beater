@@ -6,4 +6,4 @@
 
 (defn get-league
   [league-id]
-  (client/get (format path-league league-id)))
+  (client/get-stats-api (format path-league league-id)))
