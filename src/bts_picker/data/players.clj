@@ -4,10 +4,10 @@
 (defn- transform-player-data
   [player-data]
   {:id (some-> player-data :id str)
-   :name (some-> player-data :nameFirstLast)
-   :position (some-> player-data :primaryPosition)
-   :bats (some-> player-data :batSide)
-   :throws (some-> player-data :pitchHand)})
+   :name (:nameFirstLast player-data)
+   :position (:primaryPosition player-data)
+   :bats (:batSide player-data)
+   :throws (:pitchHand player-data)})
 
 (defn players
   [player-ids]

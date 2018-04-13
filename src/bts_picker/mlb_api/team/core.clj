@@ -17,10 +17,8 @@
    (client/get-stats-api path-teams {:query-params {:sportIds sport-ids}})))
 
 (defn get-team
-  ([team-id]
-   (get-team team-id))
-  ([team-id]
-   (client/get-stats-api (format path-team team-id))))
+  [team-id]
+  (client/get-stats-api (format path-team team-id)))
 
 (defn get-coaches
   [team-id]
@@ -35,6 +33,6 @@
    (get-roster team-id {}))
   ([team-id {:keys [roster-type]}]
    (client/get-stats-api
-     (if roster-type
-       (format path-roster team-id roster-type)
-       (format path-rosters team-id)))))
+    (if roster-type
+      (format path-roster team-id roster-type)
+      (format path-rosters team-id)))))
