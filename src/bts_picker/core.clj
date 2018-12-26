@@ -296,4 +296,4 @@
     (print-worst-pitcher-data games worst-pitchers)
     (println)
     (print-best-batter-data games worst-pitchers best-batters)))
-    
+

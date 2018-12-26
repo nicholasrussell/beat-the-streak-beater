@@ -1,6 +1,7 @@
 (ns bts-picker.mlb-api.config.core
   (:require [bts-picker.mlb-api.client.core :as client]
-            [clojure.spec.alpha :as s]))
+            [clojure.spec.alpha :as s]
+            [clojure.string :as string]))
 
 (def ^:private path-baseball-stats "/v1/baseballStats")
 (def ^:private path-event-types "/v1/eventTypes")
@@ -26,97 +27,101 @@
 (def ^:private path-stat-types "/v1/statTypes")
 (def ^:private path-wind-directions "/v1/windDirection")
 
+(defn- filter-by-non-empty-key
+  [k coll]
+  (filter #(not (string/blank? (k %))) coll))
+
 (defn get-baseball-stats
   []
-  (client/get path-baseball-stats))
+  (filter-by-non-empty-key :name (client/get path-baseball-stats)))
 
 (defn get-event-types
   []
-  (client/get path-event-types))
+  (filter-by-non-empty-key :code (client/get path-event-types)))
 
-(defn get-game-statuses
+(defn get-game-statusesget 
   []
-  (client/get path-game-statuses))
+  (filter-by-non-empty-key :statusCode (client/get path-game-statuses)))
 
 (defn get-game-types
   []
-  (client/get path-game-types))
+  (filter-by-non-empty-key :id (client/get path-game-types)))
 
 (defn get-hit-trajectories
   []
-  (client/get path-hit-trajectories))
+  (filter-by-non-empty-key :code (client/get path-hit-trajectories)))
 
 (defn get-job-types
   []
-  (client/get path-job-types))
+  (filter-by-non-empty-key :code (client/get path-job-types)))
 
 (defn get-languages
   []
-  (client/get path-languages))
+  (filter-by-non-empty-key :languageCode (client/get path-languages)))
 
 (defn get-league-leader-types
   []
-  (client/get path-league-leader-types))
+  (filter-by-non-empty-key :displayName (client/get path-league-leader-types)))
 
 (defn get-logical-events
   []
-  (client/get path-logical-events))
+  (filter-by-non-empty-key :code (client/get path-logical-events)))
 
 (defn get-metrics
   []
-  (client/get path-metrics))
+  (filter-by-non-empty-key :name (client/get path-metrics)))
 
 (defn get-pitch-codes
   []
-  (client/get path-pitch-codes))
+  (filter-by-non-empty-key :code (client/get path-pitch-codes)))
 
 (defn get-pitch-types
   []
-  (client/get path-pitch-types))
+  (filter-by-non-empty-key :code (client/get path-pitch-types)))
 
 (defn get-platforms
   []
-  (client/get path-platforms))
+  (filter-by-non-empty-key :platformCode (client/get path-platforms)))
 
 (defn get-positions
   []
-  (client/get path-positions))
+  (filter-by-non-empty-key :code (client/get path-positions)))
 
 (defn get-review-reasons
   []
-  (client/get path-review-reasons))
+  (filter-by-non-empty-key :code (client/get path-review-reasons)))
 
 (defn get-roster-types
   []
-  (client/get path-roster-types))
+  (filter-by-non-empty-key :parameter (client/get path-roster-types)))
 
 (defn get-schedule-event-types
   []
-  (client/get path-schedule-event-types))
+  (filter-by-non-empty-key :code (client/get path-schedule-event-types)))
 
 (defn get-situation-codes
   []
-  (client/get path-situation-codes))
+  (filter-by-non-empty-key :code (client/get path-situation-codes)))
 
 (defn get-skies
   []
-  (client/get path-skies))
+  (filter-by-non-empty-key :code (client/get path-skies)))
 
 (defn get-standings-types
   []
-  (client/get path-standings-types))
+  (filter-by-non-empty-key :name (client/get path-standings-types)))
 
 (defn get-stat-groups
   []
-  (client/get path-stat-groups))
+  (filter-by-non-empty-key :displayName (client/get path-stat-groups)))
 
 (defn get-stat-types
   []
-  (client/get path-stat-types))
+  (filter-by-non-empty-key :displayName (client/get path-stat-types)))
 
 (defn get-wind-directions
   []
-  (client/get path-wind-directions))
+  (filter-by-non-empty-key :code (client/get path-wind-directions)))
 
 ; (->> (get-game-statuses) (map :abstractGameCode) (into #{}))
 
@@ -175,6 +180,13 @@
 (s/def ::language (s/keys :req-un [:language/name
                                    :language/languageCode
                                    :language/locale]))
+
+(s/def :league-leader-type/displayName string?)
+(s/def :league-leader-type/validSports (s/coll-of string?)) ; TODO sport?
+(s/def :league-leader-type/hasMinimums boolean?)
+(s/def ::league-leader-type (s/keys :req-un [:league-leader-type/displayName
+                                             :league-leader-type/validSports
+                                             :league-leader-type/hasMinimums]))
 
 (s/def :logical-event/code string?)
 (s/def ::logical-event (s/keys :req-un [:logical-event/code]))
@@ -275,8 +287,6 @@
 
 (s/def :stat-type/displayName string?)
 (s/def ::stat-type (s/keys :req-un [:stat-type/displayName]))
-
-(s/def ::league-leader-type (s/keys :req-un [])) ; TODO
 
 (s/fdef get-baseball-stats
   :args (s/cat)
