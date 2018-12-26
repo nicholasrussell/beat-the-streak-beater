@@ -6,8 +6,8 @@
 
 (defn get-venues
   []
-  (client/get-stats-api path-venues))
+  (client/get path-venues))
 
 (defn get-venue
   [venue-id]
-  (client/get-stats-api (format path-venue venue-id)))
+  (client/get (format path-venue venue-id)))

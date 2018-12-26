@@ -5,6 +5,6 @@
 
 (defn get-player-stats
   [person-id stat-types stat-groups]
-  (client/get-stats-api path-stats {:query-params {:personId person-id
-                                                   :stats stat-types
-                                                   :group stat-groups}}))
+  (client/get path-stats {:query-params {:personId person-id
+                                         :stats stat-types
+                                         :group stat-groups}}))

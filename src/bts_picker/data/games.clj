@@ -1,16 +1,40 @@
 (ns bts-picker.data.games
-  (:require [bts-picker.mlb-api.game.core :as api-game]
+  (:require [clojure.spec.alpha :as s]
+            [bts-picker.mlb-api.game.core :as api-game]
             [bts-picker.mlb-api.schedule.core :as api-schedule]
             [bts-picker.mlb-api.team.core :as api-team]
-            [bts-picker.util.date :as date-util]))
+            [bts-picker.util.date.core :as date-util]
+            [bts-picker.util.date.spec :as date-util-spec]
+            [clojure.tools.trace :as trace]
+            [cheshire.core :as cheshire]
+            [clojure.string :as string])
+  (:import (java.time LocalDate)))
+
+(s/def ::game-id (s/or :string string?
+                       :integer pos-int?))
 
 (defn game-id
   [data]
   (some-> data :gamePk str))
 
+(defn- transform-yes-no
+  [yn]
+  (= (string/lower-case yn) "y"))
+
 (defn- transform-schedule-to-game-ids
   [schedule-data]
   (some->> schedule-data :dates first :games (map game-id)))
+
+(defn- transform-game-data-meta
+  [game]
+  {:id (some-> game :id)
+   :type (some-> game :type)
+   :gameday-type (some-> game :gamedayType)
+   :season (some-> game :season)
+   :game-number (some-> game :gameNumber)
+   :tiebreaker? (some-> game :tiebreaker transform-yes-no)
+   :double-header? (some-> game :doubleHeader transform-yes-no)
+   :calendar-event-id (some-> game :calendarEventID)})
 
 (defn- transform-game-data-status
   [status]
@@ -23,7 +47,8 @@
    :name (:name venue)
    :location {:city (some-> venue :location :city)
               :state (some-> venue :location :state)
-              :state-abbrev (some-> venue :location :stateAbbrev)}
+              :state-abbrev (some-> venue :location :stateAbbrev)
+              :coordinates (some-> venue :location :defaultCoordinates)}
    :timezone (some-> venue :timeZone)})
 
 (defn- transform-game-data-weather
@@ -41,7 +66,8 @@
   [team]
   (let [team (select-keys team [:id :name])]
     {:id (some-> team :id str)
-     :name (:name team)}))
+     :name (:name team)
+     :record (:record team)}))
 
 (defn- transform-game-data-teams
   [teams]
@@ -91,12 +117,14 @@
 
 (defn- transform-game-data
   [game]
+  (println (cheshire/generate-string (-> game :gameData :teams) {:pretty true}))
   (let [game-data (:gameData game)
         team-data (some-> game-data :teams transform-game-data-teams)
         rosters (some-> team-data transform-team-data-rosters)
         players (some-> game-data :players transform-game-data-players)
         roster-players (join-game-data-rosters-players rosters players)]
     {:id (game-id game)
+     :meta (some-> game-data :game transform-game-data-meta)
      :date (some-> game-data :datetime :dateTime)
      :status (some-> game-data :status transform-game-data-status)
      :venue (some-> game-data :venue transform-game-data-venue)
@@ -109,7 +137,14 @@
    (get-games (date-util/now)))
   ([date]
    (transform-schedule-to-game-ids (api-schedule/get-schedule {:date (date-util/format-date date)}))))
+(s/fdef get-games
+        :args (s/alt :default-date (s/cat)
+                     :specific-date (s/cat :date ::date-util-spec/iso-date))
+        :ret (s/nilable (s/coll-of ::game-id)))
 
 (defn get-game
   [game-id]
   (transform-game-data (api-game/get-live-feed game-id)))
+(s/fdef get-game
+        :args (s/cat :game-id ::game-id))
+

@@ -7,5 +7,5 @@
   ([]
    (get-schedule {}))
   ([{:keys [sport-id date] :or {sport-id 1}}]
-   (client/get-stats-api path-schedule {:query-params {:sportId sport-id
-                                                       :date date}})))
+   (client/get path-schedule {:query-params {:sportId sport-id
+                                             :date date}})))

@@ -8,10 +8,10 @@
   ([]
    (get-seasons {}))
   ([{:keys [sport-id] :or {sport-id 1}}]
-   (client/get-stats-api path-seasons {:query-params {:sportId sport-id}})))
+   (client/get path-seasons {:query-params {:sportId sport-id}})))
 
 (defn get-season
   ([season-id]
    (get-season season-id))
   ([season-id {:keys [sport-id] :or {sport-id 1}}]
-   (client/get-stats-api (format path-season season-id) {:query-params {:sportId sport-id}})))
+   (client/get (format path-season season-id) {:query-params {:sportId sport-id}})))

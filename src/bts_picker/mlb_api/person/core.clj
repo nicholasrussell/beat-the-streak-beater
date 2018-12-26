@@ -7,15 +7,15 @@
 
 (defn get-people
   [person-ids]
-  (client/get-stats-api path-people {:query-params {:personIds person-ids}}))
+  (client/get path-people {:query-params {:personIds person-ids}}))
 
 (defn get-person
   [person-id]
-  (client/get-stats-api (format path-person person-id)))
+  (client/get (format path-person person-id)))
 
 (defn get-person-game-stats
   ([person-id game-pk]
    (get-person-game-stats person-id game-pk {}))
   ([person-id game-pk {:keys [group]}]
-   (client/get-stats-api (format path-game-stats person-id game-pk)
-                         {:query-params {:group group}})))
+   (client/get (format path-game-stats person-id game-pk)
+               {:query-params {:group group}})))

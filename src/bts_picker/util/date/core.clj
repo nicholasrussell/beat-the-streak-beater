@@ -1,6 +1,12 @@
-(ns bts-picker.util.date
+(ns bts-picker.util.date.core
   (:require [java-time])
   (:import (java.time LocalDate)))
+
+(defn- ->int
+  [i]
+  (if (string? i)
+    (Integer/parseInt i)
+    i))
 
 (defn now
   []
@@ -8,7 +14,7 @@
 
 (defn of
   [year month day]
-  (java-time/local-date year month day))
+  (java-time/local-date (->int year) (->int month) (->int day)))
 
 (defn format-date
   [date]
@@ -16,3 +22,4 @@
     (instance? LocalDate date) (java-time/format date)
     (string? date) date
     :else nil))
+

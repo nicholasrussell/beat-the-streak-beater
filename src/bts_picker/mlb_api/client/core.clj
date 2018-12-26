@@ -1,31 +1,39 @@
 (ns bts-picker.mlb-api.client.core
   (:require [clj-http.client :as http-client]
-            [cheshire.core :as cheshire]
-            [clojure.tools.trace :as trace]
-            [clojure.spec.alpha :as s]))
+            [clojure.spec.alpha :as s]
+            [clojure.string :as string])
+  (:refer-clojure :exclude [get])
+  (:import (java.net URI)))
 
-(def ^:private debug false)
-(def ^:private base-url-stats-api "http://statsapi.mlb.com/api")
+(def ^{:private true :dynamic true} *debug* false)
+(def ^:private stats-api-base-url "http://statsapi.mlb.com/api")
 
 (defn- make-stats-api-url
   [path]
-  (format "%s/%s" base-url-stats-api path))
+  (URI. (str stats-api-base-url path)))
 
-(defn get-stats-api
+(defn get
   ([path]
-   (get-stats-api path {}))
+   (get path {}))
   ([path {:keys [query-params]}]
-    ; TODO handle exceptions
    (some->
-     (http-client/get
-       (make-stats-api-url path)
-       {:query-params query-params
-        :as :json
-        :debug debug})
-     :body)))
+    (http-client/get
+     (-> path make-stats-api-url str)
+     {:query-params query-params
+      :as :json
+      :debug *debug*
+      :debug-body *debug*})
+    :body)))
 
-(s/fdef get-stats-api
-        :args (s/or :path (s/cat :path string?)
-                    :path-options (s/cat :path string?
-                                         :options map?))
-        :ret map?)
+(s/def ::path (s/and string?
+                     #(string/starts-with? % "/")
+                     #(= (str "/api" %) (.getPath (make-stats-api-url %)))))
+(s/def ::query-params (s/nilable map?))
+(s/def ::options (s/keys :opt-un [::query-params]))
+
+(s/fdef get
+        :args (s/or :path (s/cat :path ::path)
+                    :path-with-options (s/cat :path ::path
+                                              :options ::options))
+        :ret (s/or :object map?
+                   :array coll?))

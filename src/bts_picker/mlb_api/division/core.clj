@@ -7,10 +7,10 @@
 (defn get-divisions
   ([]
    (get-divisions {}))
-  ([{:keys [sport-id]}]
-   (client/get-stats-api path-divisions
-                         {:query-params (when sport-id {:sportId sport-id})})))
+  ([{:keys [sport-id] :or {sport-id 1}}]
+   (client/get path-divisions
+               {:query-params (when sport-id {:sportId sport-id})})))
 
 (defn get-division
   [division-id]
-  (client/get-stats-api (format path-division division-id)))
+  (client/get (format path-division division-id)))
