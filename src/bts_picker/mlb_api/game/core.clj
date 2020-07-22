@@ -1,16 +1,16 @@
 (ns bts-picker.mlb-api.game.core
   (:require [bts-picker.mlb-api.client.core :as client]))
 
-(def ^:private path-game-1_1 "/v1.1/game/%s")
-(def ^:private path-game-1 "/v1/game/%s")
-(def ^:private path-live-feed (str path-game-1_1 "/feed/live"))
+(def ^:private path-game-v1_1 "/v1.1/game/%s")
+(def ^:private path-game-v1 "/v1/game/%s")
+(def ^:private path-live-feed (str path-game-v1_1 "/feed/live"))
 (def ^:private path-live-feed-diff-patch (str path-live-feed "/diffPatch"))
 (def ^:private path-live-feed-timestamps (str path-live-feed "/timestamps"))
-(def ^:private path-context-metrics (str path-game-1 "/contextMetrics"))
-(def ^:private path-win-probability (str path-game-1 "/winProbability"))
-(def ^:private path-box-score (str path-game-1 "/boxscore"))
-(def ^:private path-line-score (str path-game-1 "/linescore"))
-(def ^:private path-play-by-play (str path-game-1 "/playByPlay"))
+(def ^:private path-context-metrics (str path-game-v1 "/contextMetrics"))
+(def ^:private path-win-probability (str path-game-v1 "/winProbability"))
+(def ^:private path-box-score (str path-game-v1 "/boxscore"))
+(def ^:private path-line-score (str path-game-v1 "/linescore"))
+(def ^:private path-play-by-play (str path-game-v1 "/playByPlay"))
 
 (defn get-live-feed
   ([game-pk]

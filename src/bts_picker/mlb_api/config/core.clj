@@ -27,6 +27,8 @@
 (def ^:private path-stat-types "/v1/statTypes")
 (def ^:private path-wind-directions "/v1/windDirection")
 
+; TODO :body
+
 (defn- filter-by-non-empty-key
   [k coll]
   (filter #(not (string/blank? (k %))) coll))

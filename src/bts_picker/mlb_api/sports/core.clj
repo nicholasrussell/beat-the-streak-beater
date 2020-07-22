@@ -11,3 +11,4 @@
 (defn get-sport
   [sport-id]
   (client/get (format path-sport sport-id)))
+

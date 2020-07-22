@@ -14,3 +14,4 @@
 (defn get-division
   [division-id]
   (client/get (format path-division division-id)))
+

@@ -6,6 +6,6 @@
 (defn get-schedule
   ([]
    (get-schedule {}))
-  ([{:keys [sport-id date] :or {sport-id 1}}]
+  ([{:keys [sport-id date]}]
    (client/get path-schedule {:query-params {:sportId sport-id
                                              :date date}})))
