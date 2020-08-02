@@ -2,6 +2,7 @@
   (:require [clojure.tools.trace :refer :all]
             [clojure.pprint :as pprint]
             [clojure.string :as str]
+            [bts-picker.config as config]
             [bts-picker.util :as util]
             [bts-picker.games]
             [bts-picker.probable-pitchers]
@@ -282,6 +283,7 @@
 
 (defn -main
   [& args]
+  (config/initialize (read-string (slurp "conf/bts-picker.conf")))
   (let [date (util/now)
         games (bts-picker.games/games date)
         probable-pitchers (bts-picker.probable-pitchers/probable-pitchers date)

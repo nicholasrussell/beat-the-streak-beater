@@ -1,12 +1,11 @@
 (ns bts-picker.colors
   (:require [bts-picker.util :as util]
-            [clojure.tools.trace :refer :all]))
-
-(def ^:private colors-url "https://raw.githubusercontent.com/jimniels/teamcolors/master/static/data/teams.json")
+            [clojure.tools.trace :refer :all]
+            [bts-picker.config :as config]))
 
 (defn- get-team-color-data
   []
-  (util/get-json colors-url))
+  (util/get-json (config/team-colors-url)))
 
 (defn team-colors
   [team-name]

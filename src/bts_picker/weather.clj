@@ -1,12 +1,12 @@
 (ns bts-picker.weather
   (:require [bts-picker.util :as util]
             [clojure.string :as str]
-            [clojure.tools.trace :refer :all]))
+            [clojure.tools.trace :refer :all]
+            [bts-picker.config :as config]))
 
-;; TODO move me
-(def ^:private api-key "***REMOVED***")
-
-(def ^:private base-url (str "***REMOVED***" api-key))
+(defn get-base-url
+  []
+  (str (config/weather-api-url) (config/weather-api-key)))
 
 (defn- strip-state
   [location]
@@ -14,7 +14,7 @@
 
 (defn- weather-url
   [location]
-  (format base-url (strip-state location)))
+  (format (get-base-url) (strip-state location)))
 
 (defn- weather-data
   [location]
