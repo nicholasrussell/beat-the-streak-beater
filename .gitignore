@@ -11,3 +11,8 @@ pom.xml.asc
 .hg/
 *.csv
 conf/config.edn
+.lsp/
+.clj-kondo/
+.env
+.calva/
+conf/bts-picker.edn

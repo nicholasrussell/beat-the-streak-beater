@@ -1,0 +1,10 @@
+ALTER TABLE teams
+DROP CONSTRAINT IF EXISTS fk_division;
+--;;
+ALTER TABLE teams
+DROP CONSTRAINT IF EXISTS fk_league;
+--;;
+ALTER TABLE teams
+DROP CONSTRAINT IF EXISTS fk_venue;
+--;;
+DROP TABLE IF EXISTS teams;

@@ -1,22 +1,40 @@
-(defproject bts-picker "0.1.0"
-  :description "A tool to make MLB Beat the Streak picks for me"
-  :url "http://example.com/FIXME"
-  :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.10.1"]
-                 [clj-http "3.10.0"]
-                 [org.clojure/data.csv "1.0.0"]
-                 [reaver "0.1.3"]
-                 [clojure.java-time "0.3.2"]
-                 [org.clojure/tools.trace "0.7.10"]
-                 [cheshire "5.10.0"]
-                 [com.rpl/specter "1.1.3"]
-                 [org.clojure/test.check "1.0.0"]
-                 [com.gfredericks/test.chuck "0.2.10"]]
-  :managed-dependencies [[org.clojure/core.rrb-vector "0.1.1"]]
-  :main bts-picker.core
-  :profiles {:repl {:plugins [[cider/cider-nrepl "0.22.0"]
-                              [refactor-nrepl "2.4.0"]]
-                    :dependencies [[org.clojure/tools.nrepl "0.2.13"]
-                                   [alembic "0.3.2"]]}})
+(def VERSION (.trim (slurp "VERSION")))
 
+(defproject dev.russell/bts-picker VERSION
+  :description "A tool to make MLB Beat the Streak picks"
+  :url "https://russell.dev/bts-picker"
+  :license {:name "apache-2.0"
+            :url "https://www.apache.org/licenses/LICENSE-2.0"}
+  :dependencies [[org.clojure/clojure "1.11.1"]
+                 [dev.russell/batboy "0.2.0"]
+                 [com.github.seancorfield/next.jdbc "1.2.780"]
+                 [org.postgresql/postgresql "42.3.4"]
+                 [migratus "1.3.6"]
+                 [clojure.java-time "0.3.3"]
+                 [org.clojure/tools.cli "1.0.206"]
+                 [org.clojure/tools.trace "0.7.11"]
+                 [com.taoensso/timbre "5.2.1"]
+                 [org.clojure/test.check "1.1.1"]
+                 [com.gfredericks/test.chuck "0.2.13"]]
+  :plugins [[migratus-lein "0.7.3"]]
+  :profiles {:dev [:project/dev :profiles/dev]
+             :test [:project/test :profiles/test]
+             :dev-ops [:project/dev-ops :profiles/dev-ops]
+             :profiles/dev  {}
+             :profiles/test {}
+             :profiles/dev-ops {}
+             :project/dev {}
+             :project/test {}
+             :project/dev-ops {:source-paths ["db/"]}}
+  :main dev.russell.bts-picker.core
+  :aliases {"launch" ["run" "-m" "dev.russell.bts-picker.core"]}
+  :repl-options {:init-ns dev.russell.bts-picker.core}
+  :deploy-branches ["master"]
+  :migratus {:store :database
+             :migration-dir "db/migrations/"
+             :init-script "init.edn"
+             :migration-table-name "migrations"
+             :db {:dbtype "postgresql"
+                  :dbname #=(eval (if (= (System/getenv "BTS_ENV") "test") "bts_test" "bts"))
+                  :user #=(eval (System/getenv "BTS_DB_USER"))
+                  :password #=(eval (System/getenv "BTS_DB_PASSWORD"))}})

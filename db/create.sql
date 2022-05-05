@@ -1,0 +1,4 @@
+CREATE DATABASE bts OWNER postgres;
+GRANT CONNECT ON DATABASE bts TO postgres;
+CREATE DATABASE bts_test OWNER postgres;
+GRANT CONNECT ON DATABASE bts_test TO postgres;
