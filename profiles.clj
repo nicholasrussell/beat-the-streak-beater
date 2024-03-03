@@ -1,6 +1,6 @@
 {:dev  {:env {:env "dev"
               :db-user "postgres"
-              :db-password "mylo"}}
+              :db-password "password"}}
  :test {:env {:env "test"
               :db-user "postgres"
-              :db-password "mylo"}}}
+              :db-password "password"}}}

@@ -30,7 +30,7 @@
 
 (defn get-db-password
   []
-  (or (System/getenv "BTS_DB_PASSWORD") "mylo"))
+  (or (System/getenv "BTS_DB_PASSWORD") "password"))
 
 (defn initialize
   [config]

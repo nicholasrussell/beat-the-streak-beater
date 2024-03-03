@@ -3,7 +3,7 @@
             [next.jdbc.result-set :as rs]))
 
 (def ^:private upsert-query
-"
+ "
 INSERT INTO games (id, date, date_time, away_team, home_team, series_game_number, games_in_series, season, game_type, venue, double_header, day_night, created_at, updated_at)
 VALUES(%d, '%s', '%s', %d, %d, %d, %d, '%s', '%s', %d, %b, '%s', now(), now())
 ON CONFLICT (id)
@@ -23,13 +23,28 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-id-query
-"
+ "
 SELECT * FROM games WHERE id = %d;
 ")
 
 (def ^:private get-by-date-query
-"
+ "
 SELECT * FROM games WHERE date = '%s';
+")
+
+(def ^:private get-matchups-by-date-query
+  "
+SELECT gtr.game_id, gtr.team_id, gtr.roster, gtr.side, pp.player_id AS probable_pitcher FROM
+(SELECT g.id AS game_id, r.team_id, CASE WHEN g.away_team = r.team_id THEN 'away' ELSE 'home' END AS side, array_agg(r.player_id) AS roster
+ FROM games g
+ LEFT JOIN rosters r
+ ON g.away_team = r.team_id
+ OR g.home_team = r.team_id
+ WHERE g.date = '%s'
+ GROUP BY g.id, r.team_id) AS gtr
+LEFT JOIN probable_pitchers pp
+ON gtr.game_id = pp.game_id
+WHERE pp.side = gtr.side;
 ")
 
 (defn upsert
@@ -69,3 +84,20 @@ SELECT * FROM games WHERE date = '%s';
                :day-night (:dayNight game)}))
        (map (partial upsert ds))
        doall))
+
+(defn get-matchups-by-date
+  [ds date]
+  (reduce
+   (fn [acc cur]
+     (let [side (keyword (:side cur))
+           side-map {:team-id (:team-id cur)
+                     :roster-ids (into [] (java.util.Arrays/asList (.getArray (:roster cur))))
+                     :probable-pitcher-id (:probable-pitcher cur)}]
+       (if-let [existing-side (get acc (:game-id cur))]
+         (assoc acc (:game-id cur) (assoc existing-side side side-map))
+         (assoc acc (:game-id cur) {side side-map}))))
+   {}
+   (jdbc/execute! ds
+                  [(format get-matchups-by-date-query date)]
+                  {:return-keys true :builder-fn rs/as-unqualified-kebab-maps})))
+

@@ -117,8 +117,8 @@
                                   (let [roster (reduce
                                                 (fn [_ cur]
                                                   (when-let [player (->> cur :roster (filter #(= (:player-id %) (:player-id batter))) first)]
-                                                    (reduced {:player-name (:name player)
-                                                              :team-name (:name (:team cur))})))
+                                                     (reduced {:player-name (:name player)
+                                                               :team-name (:name (:team cur))})))
                                                 nil
                                                 @rosters)]
                                     (merge batter roster)))

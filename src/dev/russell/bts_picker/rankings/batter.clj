@@ -30,8 +30,8 @@
 (defn- weight
   [key score stat-totals]
   (condp = key
-    :season-hits (* (range-normalized-score score (:season-hits-min stat-totals) (:season-hits-max stat-totals)) (/ 1.0 7.0))
-    :season-hit-percentage (* score (/ 6.0 7.0))
+    :season-hits (* (range-normalized-score score (:season-hits-min stat-totals) (:season-hits-max stat-totals)) (/ 3.0 7.0))
+    :season-hit-percentage (* score (/ 4.0 7.0))
     nil))
 
 (defn- apply-weights
@@ -80,6 +80,10 @@
     (if (nil? raw-stat)
       stat-total
       (fn stat-total raw-stat))))
+
+(defn- stat-totals
+  []
+  )
 
 (defn score-batters
   [player-ids]
