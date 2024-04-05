@@ -273,7 +273,10 @@
                :first-name (:firstName player)
                :last-name (:lastName player)
                :full-name (:fullName player)
-               :primary-number (:primaryNumber player)
+               :primary-number (let [number (or (:primaryNumber player) "0")]
+                                 (if (= number "null")
+                                   "0"
+                                   number))
                :birth-date (:birthDate player)
                :height (:height player)
                :weight (:weight player)
@@ -306,7 +309,8 @@
                                                                         :season (season/get-current-id ds)}})
                             :body
                             :roster)]
-                 ; this is hacky but whatever. could at least put it in a txn
+            ; this is hacky but whatever. could at least put it in a txn
+            ; this is so we remove guys who are no longer on the team roster
             (roster/delete-by-team-id ds team-id)
             (doall
              (pmap

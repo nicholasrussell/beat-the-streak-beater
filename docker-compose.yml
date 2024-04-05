@@ -2,6 +2,7 @@ version: "3.9"
 services:
   postgres:
     image: postgres:15
+    command: -c 'max_connections=1000'
     ports:
       - "5432:5432"
     environment:
