@@ -17,6 +17,7 @@
 
 (defn- season-hit-percentage
   [stats]
+  ;; We care more about PA than AB for BTS
   (if (or (nil? (:plateAppearances stats)) (<= (:plateAppearances stats) 0))
     0.0
     (double (/ (:hits stats) (:plateAppearances stats)))))
@@ -82,8 +83,7 @@
       (fn stat-total raw-stat))))
 
 (defn- stat-totals
-  []
-  )
+  [])
 
 (defn score-batters
   [player-ids]

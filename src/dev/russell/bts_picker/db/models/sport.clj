@@ -1,12 +1,11 @@
 (ns dev.russell.bts-picker.db.models.sport
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]
-            [dev.russell.bts-picker.constants :refer [SPORT_CODE_MLB]]))
+  (:require [dev.russell.bts-picker.constants :refer [SPORT_CODE_MLB]]
+            [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO sports (id, code, name, abbreviation, created_at, updated_at)
-VALUES(%d, '%s', '%s', '%s', now(), now())
+VALUES(?, ?, ?, ?, now(), now())
 ON CONFLICT (id)
 DO UPDATE SET
  code = EXCLUDED.code,
@@ -16,31 +15,37 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-id-query
-"
-SELECT * FROM sports WHERE id = %d;
+  "
+SELECT * FROM sports WHERE id = ?;
 ")
 
 (def ^:private get-mlb-id-query
-(str "
-SELECT id FROM sports WHERE code = '"
-SPORT_CODE_MLB
-"';
-"))
+  "
+SELECT id FROM sports WHERE code = ?;
+")
 
 (defn upsert
   [ds sport]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:id sport) (:code sport) (:name sport) (:abbreviation sport))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:id sport) (:code sport) (:name sport) (:abbreviation sport)]))
+
+(defn upsert-batch
+  [ds sports]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [sport] [(:id sport) (:code sport) (:name sport) (:abbreviation sport)]) sports)))
 
 (defn get-by-id
   [ds id]
-  (jdbc/execute-one! ds
-                     [(format get-by-id-query id)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-id-query id]))
 
 (defn get-mlb-id
   [ds]
-  (:id (jdbc/execute-one! ds
-                          [get-mlb-id-query]
-                          {:return-keys true :builder-fn rs/as-unqualified-kebab-maps})))
+  (:id
+   (db-core/execute-one!
+    ds
+    [get-mlb-id-query SPORT_CODE_MLB])))

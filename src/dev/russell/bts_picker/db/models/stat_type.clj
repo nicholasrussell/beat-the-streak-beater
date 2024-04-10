@@ -1,29 +1,35 @@
 (ns dev.russell.bts-picker.db.models.stat-type
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO stat_types (code, created_at, updated_at)
-VALUES('%s', now(), now())
+VALUES(?, now(), now())
 ON CONFLICT (code)
 DO UPDATE SET
  updated_at = EXCLUDED.updated_at;
 ")
 
 (def ^:private get-by-code-query
-"
-SELECT * FROM stat_types WHERE code = '%s';
+  "
+SELECT * FROM stat_types WHERE code = ?;
 ")
 
 (defn upsert
   [ds stat-type]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:code stat-type))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:code stat-type)]))
+
+(defn upsert-batch
+  [ds stat-types]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [stat-type] [(:code stat-type)]) stat-types)))
 
 (defn get-by-code
   [ds code]
-  (jdbc/execute-one! ds
-                     [(format get-by-code-query code)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-code-query code]))

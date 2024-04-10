@@ -43,8 +43,7 @@
   (log/debug :seed/starting :game-types)
   (->> @(api-meta/get-game-types {})
        :body
-       (map (partial game-type/upsert ds))
-       doall)
+       (game-type/upsert-batch ds))
   (log/debug :seed/finished :game-types))
 
 (defn seed-hit-trajectories
@@ -52,8 +51,7 @@
   (log/debug :seed/starting :hit-trajectories)
   (->> @(api-meta/get-hit-trajectories {})
        :body
-       (map (partial hit-trajectory/upsert ds))
-       doall)
+       (hit-trajectory/upsert-batch ds))
   (log/debug :seed/finished :hit-trajectories))
 
 (defn seed-pitch-codes
@@ -61,8 +59,7 @@
   (log/debug :seed/starting :pitch-codes)
   (->> @(api-meta/get-pitch-codes {})
        :body
-       (map (partial pitch-code/upsert ds))
-       doall)
+       (pitch-code/upsert-batch ds))
   (log/debug :seed/finished :pitch-codes))
 
 (defn seed-pitch-types
@@ -70,8 +67,7 @@
   (log/debug :seed/starting :pitch-types)
   (->> @(api-meta/get-pitch-types {})
        :body
-       (map (partial pitch-type/upsert ds))
-       doall)
+       (pitch-type/upsert-batch ds))
   (log/debug :seed/finished :pitch-types))
 
 (defn seed-positions
@@ -88,8 +84,7 @@
                :fielder (:fielder position)
                :outfield (:outfield position)
                :pitcher (:pitcher position)}))
-       (map (partial position/upsert ds))
-       doall)
+       (position/upsert-batch ds))
   (log/debug :seed/finished :positions))
 
 (defn seed-roster-types
@@ -101,8 +96,7 @@
               {:parameter (:parameter roster-type)
                :description (:description roster-type)
                :lookup-name (:lookupName roster-type)}))
-       (map (partial roster-type/upsert ds))
-       doall)
+       (roster-type/upsert-batch ds))
   (log/debug :seed/finished :roster-types))
 
 (defn seed-skies
@@ -110,8 +104,7 @@
   (log/debug :seed/starting :skies)
   (->> @(api-meta/get-sky {})
        :body
-       (map (partial sky/upsert ds))
-       doall)
+       (sky/upsert-batch ds))
   (log/debug :seed/finished :skies))
 
 (defn seed-standing-types
@@ -119,8 +112,7 @@
   (log/debug :seed/starting :standing-types)
   (->> @(api-meta/get-standings-types {})
        :body
-       (map (partial standing-type/upsert ds))
-       doall)
+       (standing-type/upsert-batch ds))
   (log/debug :seed/finished :standing-types))
 
 (defn seed-winds
@@ -128,8 +120,7 @@
   (log/debug :seed/starting :winds)
   (->> @(api-meta/get-wind-direction {})
        :body
-       (map (partial wind/upsert ds))
-       doall)
+       (wind/upsert-batch ds))
   (log/debug :seed/finished :winds))
 
 (defn seed-stat-groups
@@ -139,8 +130,7 @@
        :body
        (map (fn [stat-group]
               {:code (:displayName stat-group)}))
-       (map (partial stat-group/upsert ds))
-       doall)
+       (stat-group/upsert-batch ds))
   (log/debug :seed/finished :stat-groups))
 
 (defn seed-stat-types
@@ -150,8 +140,7 @@
        :body
        (map (fn [stat-type]
               {:code (:displayName stat-type)}))
-       (map (partial stat-type/upsert ds))
-       doall)
+       (stat-type/upsert-batch ds))
   (log/debug :seed/finished :stat-types))
 
 (defn seed-metrics
@@ -165,8 +154,7 @@
                :name (:name metric)
                :unit (:unit metric)
                :stat-group-codes (remove string/blank? (map string/trim (string/split (or (:group metric) "") #",")))}))
-       (map (partial metric/upsert ds))
-       doall)
+       (metric/upsert-batch ds))
   (log/debug :seed/finished :metrics))
 
 (defn seed-seasons
@@ -183,8 +171,7 @@
                :regular-season-end-date (:regularSeasonEndDate season)
                :post-season-start-date (:postSeasonStartDate season)
                :post-season-end-date (:postSeasonEndDate season)}))
-       (map (partial season/upsert ds))
-       doall)
+       (season/upsert-batch ds))
   (log/debug :seed/finished :seasons))
 
 (defn seed-venues
@@ -193,8 +180,7 @@
   (->> @(api-venues/get-venues {:query-params {:season (season/get-current-id ds)}})
        :body
        :venues
-       (map (partial venue/upsert ds))
-       doall)
+       (venue/upsert-batch ds))
   (log/debug :seed/finished :venues))
 
 (defn seed-sports
@@ -204,8 +190,7 @@
        :body
        :sports
        (filter #(= (:code %) SPORT_CODE_MLB))
-       (map (partial sport/upsert ds))
-       doall)
+       (sport/upsert-batch ds))
   (log/debug :seed/finished :sports))
 
 (defn seed-leagues
@@ -221,8 +206,7 @@
                :code (:orgCode league)
                :name (:name league)
                :sport-id (:id (:sport league))}))
-       (map (partial league/upsert ds))
-       doall)
+       (league/upsert-batch ds))
   (log/debug :seed/finished :leagues))
 
 (defn seed-divisions
@@ -237,8 +221,7 @@
                :name (:name division)
                :sport-id (:id (:sport division))
                :league-id (:id (:league division))}))
-       (map (partial division/upsert ds))
-       doall)
+       (division/upsert-batch ds))
   (log/debug :seed/finished :divisions))
 
 (defn seed-teams
@@ -259,8 +242,7 @@
                :venue-id (:id (:venue team))
                :league-id (:id (:league team))
                :division-id (:id (:division team))}))
-       (map (partial team/upsert ds))
-       doall)
+       (team/upsert-batch ds))
   (log/debug :seed/finished :teams))
 
 (defn seed-roster-player
@@ -309,8 +291,8 @@
                                                                         :season (season/get-current-id ds)}})
                             :body
                             :roster)]
-            ; this is hacky but whatever. could at least put it in a txn
-            ; this is so we remove guys who are no longer on the team roster
+                                        ; this is hacky but whatever. could at least put it in a txn
+                                        ; this is so we remove guys who are no longer on the team roster
             (roster/delete-by-team-id ds team-id)
             (doall
              (pmap
@@ -323,6 +305,10 @@
             (log/debug :seed/finished {:roster team-id}))))
        doall)
   (log/debug :seed/finished :rosters))
+
+(defn get-player-with-stats
+  [player-id]
+  (comment "https://statsapi.mlb.com/api/v1/people/677951?hydrate=currentTeam,team,stats(type=[yearByYear,yearByYearAdvanced,careerRegularSeason,careerAdvanced,availableStats](team(league)),leagueListId=mlb_hist)&site=en"))
 
 (defn- map-batting-stats
   [stats]
@@ -431,8 +417,7 @@
                       (remove #(= (:season %) current-season)))))
          (mapcat identity)
          (pmap map-batting-stats)
-         (pmap (partial player-stats/upsert-batting-stats ds))
-         doall))
+         (player-stats/upsert-batting-stats-batch ds)))
   (log/debug :seed/finished :previous-seasons-batting-stats))
 
 (defn seed-current-season-batting-stats
@@ -478,9 +463,26 @@
                              :sacBunts 0
                              :sacFlies 0}}))))
          (pmap map-batting-stats)
-         (pmap (partial player-stats/upsert-batting-stats ds))
-         doall))
+         (player-stats/upsert-batting-stats-batch ds)))
   (log/debug :seed/finished :current-season-batting-stats))
+
+(defn current-batting-stat-splits
+  [ds]
+  (let [current-season (season/get-current-id ds)]
+    (->> (player/get-active-player-ids ds)
+         (pmap (fn [player-id]
+                 (let [api-stats (->> @(api-people/get-person-stats {:path-params {:id player-id}
+                                                                     :query-params {:stats "statSplits"
+                                                                                    :group "hitting"
+                                                                                    :season current-season
+                                                                                    :gameType "R"
+                                                                                    :sitCodes "h,a,d,n,g,t,3,4,5,6,7,8,9,10,preas,posas,vl,vr,r0,r1,r2,r3,r12,r13,r23,r123,risp,o0,o1,o2,i01,i02,i03,i04,i05,i06,i07,i08,i09,ix,b1,b2,b3,b4,b5,b6,b7,b8,b9,lo,lc,ac,bc,sp,rp,h1,h2"}})
+                                      :body)]
+                   api-stats))))))
+
+(defn hitting-vs-team
+  [player-id]
+  (comment "https://statsapi.mlb.com/api/v1/people/677951/stats?stats=vsTeam&group=hitting&opposingTeamId=142&season=2024&language=en"))
 
 (defn seed-previous-seasons-pitching-stats
   [ds]
@@ -500,8 +502,7 @@
                       (remove #(= (:season %) current-season)))))
          (mapcat identity)
          (pmap map-pitching-stats)
-         (pmap (partial player-stats/upsert-pitching-stats ds))
-         doall))
+         (player-stats/upsert-pitching-stats-batch ds)))
   (log/debug :seed/finished :previous-seasons-pitching-stats))
 
 (defn seed-current-season-pitching-stats
@@ -566,8 +567,7 @@
                              :wins 0
                              :losses 0}}))))
          (pmap map-pitching-stats)
-         (pmap (partial player-stats/upsert-pitching-stats ds))
-         doall))
+         (player-stats/upsert-pitching-stats-batch ds)))
   (log/debug :seed/finished :current-season-pitching-stats))
 
 (defn seed-games
@@ -599,12 +599,12 @@
                                                  :query-params {:stats "vsPlayerTotal"
                                                                 :group "hitting"
                                                                 :opposingPlayerId (:pitcher-id matchup)}})
-                 :body
-                 :stats
-                 first
-                 :splits
-                 first
-                 :stat)
+                  :body
+                  :stats
+                  first
+                  :splits
+                  first
+                  :stat)
         mapped {:batter-id (:batter-id matchup)
                 :pitcher-id (:pitcher-id matchup)
                 :air-outs (or (:airOuts stat) 0)

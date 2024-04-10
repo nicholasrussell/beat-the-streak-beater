@@ -1,11 +1,10 @@
 (ns dev.russell.bts-picker.db.models.pitch-type
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO pitch_types (code, description, created_at, updated_at)
-VALUES('%s', '%s', now(), now())
+VALUES(?, ?, now(), now())
 ON CONFLICT (code)
 DO UPDATE SET
  description = EXCLUDED.description,
@@ -13,18 +12,26 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-code-query
-"
-SELECT * FROM pitch_types WHERE code = '%s';
+  "
+SELECT * FROM pitch_types WHERE code = ?;
 ")
 
 (defn upsert
   [ds pitch-type]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:code pitch-type) (:description pitch-type))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:code pitch-type) (:description pitch-type)]))
+
+(defn upsert-batch
+  [ds pitch-types]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [pitch-type] [(:code pitch-type) (:description pitch-type)]) pitch-types)))
+
 
 (defn get-by-code
   [ds code]
-  (jdbc/execute-one! ds
-                     [(format get-by-code-query code)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-code-query code]))

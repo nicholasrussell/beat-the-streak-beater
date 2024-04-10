@@ -1,12 +1,11 @@
 (ns dev.russell.bts-picker.db.models.league
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]
-            [dev.russell.bts-picker.constants :refer [LEAGUE_CODE_AL LEAGUE_CODE_NL]]))
+  (:require [dev.russell.bts-picker.constants :refer [LEAGUE_CODE_AL LEAGUE_CODE_NL]]
+            [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO leagues (id, code, name, sport_id, created_at, updated_at)
-VALUES(%d, '%s', '%s', %d, now(), now())
+VALUES(?, ?, ?, ?, now(), now())
 ON CONFLICT (id)
 DO UPDATE SET
  code = EXCLUDED.code,
@@ -16,61 +15,57 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-id-query
-"
-SELECT * FROM leagues WHERE id = %d;
+  "
+SELECT * FROM leagues WHERE id = ?;
 ")
 
-(def ^:private get-al-id-query
-(str "
-SELECT id FROM leagues WHERE code = '"
-LEAGUE_CODE_AL
-"';
-"))
-
-(def ^:private get-nl-id-query
-(str "
-SELECT id FROM leagues WHERE code = '"
-LEAGUE_CODE_NL
-"';
-"))
+(def ^:private get-by-code-query
+  "
+SELECT id FROM leagues WHERE code = ?;
+")
 
 (def ^:private get-mlb-league-ids-query
-(str "
-SELECT id FROM leagues WHERE code = '"
-LEAGUE_CODE_AL
-" OR code ="
-LEAGUE_CODE_NL
-"';
-"))
+  "
+SELECT id FROM leagues WHERE code = ? OR code = ?;
+")
 
 (defn upsert
   [ds league]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:id league) (:code league) (:name league) (:sport-id league))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:id league) (:code league) (:name league) (:sport-id league)]))
+
+(defn upsert-batch
+  [ds leagues]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [league] [(:id league) (:code league) (:name league) (:sport-id league)]) leagues)))
 
 (defn get-by-id
   [ds id]
-  (jdbc/execute-one! ds
-                     [(format get-by-id-query id)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-id-query id]))
 
 (defn get-al-id
   [ds]
-  (:id (jdbc/execute-one! ds
-                          [get-al-id-query]
-                          {:return-keys true :builder-fn rs/as-unqualified-kebab-maps})))
+  (:id
+   (db-core/execute-one!
+    ds
+    [get-by-code-query LEAGUE_CODE_AL])))
 
 (defn get-nl-id
   [ds]
-  (:id (jdbc/execute-one! ds
-                          [get-nl-id-query]
-                          {:return-keys true :builder-fn rs/as-unqualified-kebab-maps})))
+  (:id
+   (db-core/execute-one!
+    ds
+    [get-by-code-query LEAGUE_CODE_NL])))
 
 (defn get-mlb-league-ids
   [ds]
   (mapv
    :id 
-   (jdbc/execute! ds
-                  [get-mlb-league-ids-query]
-                  {:return-keys true :builder-fn rs/as-unqualified-kebab-maps})))
+   (db-core/execute!
+    ds
+    [get-mlb-league-ids-query LEAGUE_CODE_AL LEAGUE_CODE_NL])))

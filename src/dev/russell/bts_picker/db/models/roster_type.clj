@@ -1,11 +1,10 @@
 (ns dev.russell.bts-picker.db.models.roster-type
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO roster_types (parameter, description, lookup_name, created_at, updated_at)
-VALUES('%s', '%s', '%s', now(), now())
+VALUES(?, ?, ?, now(), now())
 ON CONFLICT (parameter)
 DO UPDATE SET
  parameter = EXCLUDED.parameter,
@@ -15,18 +14,25 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-parameter-query
-"
-SELECT * FROM roster_types WHERE parameter = '%s';
+  "
+SELECT * FROM roster_types WHERE parameter = ?;
 ")
 
 (defn upsert
   [ds roster-type]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:parameter roster-type) (:description roster-type) (:lookup-name roster-type))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:parameter roster-type) (:description roster-type) (:lookup-name roster-type)]))
+
+(defn upsert-batch
+  [ds roster-types]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [roster-type] [(:parameter roster-type) (:description roster-type) (:lookup-name roster-type)]) roster-types)))
 
 (defn get-by-parameter
   [ds parameter]
-  (jdbc/execute-one! ds
-                     [(format get-by-parameter-query parameter)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-parameter-query parameter]))

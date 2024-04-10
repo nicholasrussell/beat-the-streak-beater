@@ -1,12 +1,11 @@
 (ns dev.russell.bts-picker.db.models.metric
   (:require [clojure.string :as string]
-            [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+            [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO metrics (id, name, unit, stat_group_codes, created_at, updated_at)
-VALUES(%d, '%s', '%s', '%s', now(), now())
+VALUES(?, ?, ?, ?, now(), now())
 ON CONFLICT (id)
 DO UPDATE SET
  name = EXCLUDED.name,
@@ -16,8 +15,8 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-id-query
-"
-SELECT * FROM metrics WHERE id = %d;
+  "
+SELECT * FROM metrics WHERE id = ?;
 ")
 
 (defn- format-stat-group-codes
@@ -26,12 +25,19 @@ SELECT * FROM metrics WHERE id = %d;
 
 (defn upsert
   [ds metric]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:id metric) (:name metric) (:unit metric) (format-stat-group-codes (:stat-group-codes metric)))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:id metric) (:name metric) (:unit metric) (into-array String (:stat-group-codes metric))]))
+
+(defn upsert-batch
+  [ds metrics]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [metric] [(:id metric) (:name metric) (:unit metric) (into-array String (:stat-group-codes metric))]) metrics)))
 
 (defn get-by-id
   [ds id]
-  (jdbc/execute-one! ds
-                     [(format get-by-id-query id)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-id-query id]))

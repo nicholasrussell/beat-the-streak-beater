@@ -1,10 +1,9 @@
 (ns dev.russell.bts-picker.db.models.player-stats
   (:require [taoensso.timbre :as log]
-            [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+            [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-batting-stats-query
- "
+  "
 INSERT INTO player_stats_batting (
   player_id,
   season,
@@ -36,31 +35,31 @@ INSERT INTO player_stats_batting (
   updated_at
 )
 VALUES (
-  %d,
-  '%s',
+  ?,
+  ?,
 
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
 
   now(),
   now()
@@ -149,54 +148,54 @@ INSERT INTO player_stats_pitching (
   updated_at
 )
 VALUES (
-  %d,
-  '%s',
+  ?,
+  ?,
 
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  '%s',
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
 
   now(),
   now()
@@ -285,31 +284,31 @@ INSERT INTO batter_vs_pitcher (
   updated_at
 )
 VALUES (
-  %d,
-  %d,
+  ?,
+  ?,
 
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
-  %d,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
+  ?,
 
   now(),
   now()
@@ -343,149 +342,271 @@ DO UPDATE SET
 ")
 
 (def ^:private player-batting-stats-already-stored-query
- "
-SELECT player_id, season FROM player_stats_batting WHERE player_id = %d AND season = '%s';
+  "
+SELECT player_id, season FROM player_stats_batting WHERE player_id = ? AND season = ?;
 ")
 
 (def ^:private player-pitching-stats-already-stored-query
- "
-SELECT player_id, season FROM player_stats_pitching WHERE player_id = %d AND season = '%s';
+  "
+SELECT player_id, season FROM player_stats_pitching WHERE player_id = ? AND season = ?;
 ")
 
 (def ^:private season-hits-aggregates-query
   "
-SELECT COUNT(*), SUM(hits), MIN(hits), MAX(hits), AVG(hits), STDDEV_POP(hits) FROM player_stats_batting WHERE season = '%s';
+SELECT COUNT(*), SUM(hits), MIN(hits), MAX(hits), AVG(hits), STDDEV_POP(hits) FROM player_stats_batting WHERE season = ?;
 ")
 
 (defn upsert-batting-stats
   [ds pbs]
-  (jdbc/execute-one! ds
-                     [(format upsert-batting-stats-query
-                              (:player-id pbs)
-                              (:season pbs)
-                              (:air-outs pbs)
-                              (:at-bats pbs)
-                              (:base-on-balls pbs)
-                              (:doubles pbs)
-                              (:games-played pbs)
-                              (:ground-into-double-play pbs)
-                              (:ground-outs pbs)
-                              (:hit-by-pitch pbs)
-                              (:hits pbs)
-                              (:home-runs pbs)
-                              (:intentional-walks pbs)
-                              (:left-on-base pbs)
-                              (:number-of-pitches pbs)
-                              (:plate-appearances pbs)
-                              (:rbi pbs)
-                              (:runs pbs)
-                              (:sac-bunts pbs)
-                              (:sac-flies pbs)
-                              (:stolen-bases pbs)
-                              (:strike-outs pbs)
-                              (:total-bases pbs)
-                              (:triples pbs))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-batting-stats-query
+    (:player-id pbs)
+    (:season pbs)
+    (:air-outs pbs)
+    (:at-bats pbs)
+    (:base-on-balls pbs)
+    (:doubles pbs)
+    (:games-played pbs)
+    (:ground-into-double-play pbs)
+    (:ground-outs pbs)
+    (:hit-by-pitch pbs)
+    (:hits pbs)
+    (:home-runs pbs)
+    (:intentional-walks pbs)
+    (:left-on-base pbs)
+    (:number-of-pitches pbs)
+    (:plate-appearances pbs)
+    (:rbi pbs)
+    (:runs pbs)
+    (:sac-bunts pbs)
+    (:sac-flies pbs)
+    (:stolen-bases pbs)
+    (:strike-outs pbs)
+    (:total-bases pbs)
+    (:triples pbs)]))
+
+(defn upsert-batting-stats-batch
+  [ds pbss]
+  (db-core/execute-batch!
+   ds
+   upsert-batting-stats-query
+   (mapv
+    (fn [pbs]
+      [(:player-id pbs)
+       (:season pbs)
+       (:air-outs pbs)
+       (:at-bats pbs)
+       (:base-on-balls pbs)
+       (:doubles pbs)
+       (:games-played pbs)
+       (:ground-into-double-play pbs)
+       (:ground-outs pbs)
+       (:hit-by-pitch pbs)
+       (:hits pbs)
+       (:home-runs pbs)
+       (:intentional-walks pbs)
+       (:left-on-base pbs)
+       (:number-of-pitches pbs)
+       (:plate-appearances pbs)
+       (:rbi pbs)
+       (:runs pbs)
+       (:sac-bunts pbs)
+       (:sac-flies pbs)
+       (:stolen-bases pbs)
+       (:strike-outs pbs)
+       (:total-bases pbs)
+       (:triples pbs)])
+    pbss)))
 
 (defn upsert-pitching-stats
   [ds pps]
-  (jdbc/execute-one! ds
-                     [(format upsert-pitching-stats-query
-                              (:player-id pps)
-                              (:season pps)
-                              (:air-outs pps)
-                              (:at-bats pps)
-                              (:balks pps)
-                              (:base-on-balls pps)
-                              (:batters-faced pps)
-                              (:blown-saves pps)
-                              (:catchers-interference pps)
-                              (:caught-stealing pps)
-                              (:complete-games pps)
-                              (:doubles pps)
-                              (:earned-runs pps)
-                              (:games-finished pps)
-                              (:games-pitched pps)
-                              (:games-played pps)
-                              (:games-started pps)
-                              (:ground-into-double-play pps)
-                              (:ground-outs pps)
-                              (:hit-batsmen pps)
-                              (:hit-by-pitch pps)
-                              (:hits pps)
-                              (:holds pps)
-                              (:home-runs pps)
-                              (:inherited-runners pps)
-                              (:inherited-runners-scored pps)
-                              (:innings-pitched pps)
-                              (:innings-pitched-complete pps)
-                              (:innings-pitched-partial pps)
-                              (:intentional-walks pps)
-                              (:losses pps)
-                              (:number-of-pitches pps)
-                              (:outs pps)
-                              (:pickoffs pps)
-                              (:runs pps)
-                              (:sac-bunts pps)
-                              (:sac-flies pps)
-                              (:save-opportunities pps)
-                              (:saves pps)
-                              (:shutouts pps)
-                              (:stolen-bases pps)
-                              (:strike-outs pps)
-                              (:strikes pps)
-                              (:total-bases pps)
-                              (:triples pps)
-                              (:wild-pitches pps)
-                              (:wins pps))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-pitching-stats-query
+    (:player-id pps)
+    (:season pps)
+    (:air-outs pps)
+    (:at-bats pps)
+    (:balks pps)
+    (:base-on-balls pps)
+    (:batters-faced pps)
+    (:blown-saves pps)
+    (:catchers-interference pps)
+    (:caught-stealing pps)
+    (:complete-games pps)
+    (:doubles pps)
+    (:earned-runs pps)
+    (:games-finished pps)
+    (:games-pitched pps)
+    (:games-played pps)
+    (:games-started pps)
+    (:ground-into-double-play pps)
+    (:ground-outs pps)
+    (:hit-batsmen pps)
+    (:hit-by-pitch pps)
+    (:hits pps)
+    (:holds pps)
+    (:home-runs pps)
+    (:inherited-runners pps)
+    (:inherited-runners-scored pps)
+    (:innings-pitched pps)
+    (:innings-pitched-complete pps)
+    (:innings-pitched-partial pps)
+    (:intentional-walks pps)
+    (:losses pps)
+    (:number-of-pitches pps)
+    (:outs pps)
+    (:pickoffs pps)
+    (:runs pps)
+    (:sac-bunts pps)
+    (:sac-flies pps)
+    (:save-opportunities pps)
+    (:saves pps)
+    (:shutouts pps)
+    (:stolen-bases pps)
+    (:strike-outs pps)
+    (:strikes pps)
+    (:total-bases pps)
+    (:triples pps)
+    (:wild-pitches pps)
+    (:wins pps)]))
+
+(defn upsert-pitching-stats-batch
+  [ds ppss]
+  (db-core/execute-batch!
+   ds
+   upsert-pitching-stats-query
+   (mapv
+    (fn [pps]
+      [(:player-id pps)
+       (:season pps)
+       (:air-outs pps)
+       (:at-bats pps)
+       (:balks pps)
+       (:base-on-balls pps)
+       (:batters-faced pps)
+       (:blown-saves pps)
+       (:catchers-interference pps)
+       (:caught-stealing pps)
+       (:complete-games pps)
+       (:doubles pps)
+       (:earned-runs pps)
+       (:games-finished pps)
+       (:games-pitched pps)
+       (:games-played pps)
+       (:games-started pps)
+       (:ground-into-double-play pps)
+       (:ground-outs pps)
+       (:hit-batsmen pps)
+       (:hit-by-pitch pps)
+       (:hits pps)
+       (:holds pps)
+       (:home-runs pps)
+       (:inherited-runners pps)
+       (:inherited-runners-scored pps)
+       (:innings-pitched pps)
+       (:innings-pitched-complete pps)
+       (:innings-pitched-partial pps)
+       (:intentional-walks pps)
+       (:losses pps)
+       (:number-of-pitches pps)
+       (:outs pps)
+       (:pickoffs pps)
+       (:runs pps)
+       (:sac-bunts pps)
+       (:sac-flies pps)
+       (:save-opportunities pps)
+       (:saves pps)
+       (:shutouts pps)
+       (:stolen-bases pps)
+       (:strike-outs pps)
+       (:strikes pps)
+       (:total-bases pps)
+       (:triples pps)
+       (:wild-pitches pps)
+       (:wins pps)])
+    ppss)))
 
 (defn upsert-batter-vs-pitcher-stats
   [ds bvp]
-  (jdbc/execute-one! ds
-                     [(format upsert-batter-vs-pitcher-stats-query
-                              (:batter-id bvp)
-                              (:pitcher-id bvp)
-                              (:air-outs bvp)
-                              (:at-bats bvp)
-                              (:base-on-balls bvp)
-                              (:catchers-interference bvp)
-                              (:doubles bvp)
-                              (:games-played bvp)
-                              (:ground-into-double-play bvp)
-                              (:ground-into-triple-play bvp)
-                              (:ground-outs bvp)
-                              (:hit-by-pitch bvp)
-                              (:hits bvp)
-                              (:home-runs bvp)
-                              (:intentional-walks bvp)
-                              (:left-on-base bvp)
-                              (:number-of-pitches bvp)
-                              (:plate-appearances bvp)
-                              (:rbi bvp)
-                              (:sac-bunts bvp)
-                              (:sac-flies bvp)
-                              (:strike-outs bvp)
-                              (:total-bases bvp)
-                              (:triples bvp))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-batter-vs-pitcher-stats-query
+    (:batter-id bvp)
+    (:pitcher-id bvp)
+    (:air-outs bvp)
+    (:at-bats bvp)
+    (:base-on-balls bvp)
+    (:catchers-interference bvp)
+    (:doubles bvp)
+    (:games-played bvp)
+    (:ground-into-double-play bvp)
+    (:ground-into-triple-play bvp)
+    (:ground-outs bvp)
+    (:hit-by-pitch bvp)
+    (:hits bvp)
+    (:home-runs bvp)
+    (:intentional-walks bvp)
+    (:left-on-base bvp)
+    (:number-of-pitches bvp)
+    (:plate-appearances bvp)
+    (:rbi bvp)
+    (:sac-bunts bvp)
+    (:sac-flies bvp)
+    (:strike-outs bvp)
+    (:total-bases bvp)
+    (:triples bvp)]))
+
+(defn upsert-batter-vs-pitcher-stats-batch
+  [ds bvps]
+  (db-core/execute-batch!
+   ds
+   upsert-batter-vs-pitcher-stats-query
+   (mapv
+    (fn [bvp]
+      [(:batter-id bvp)
+       (:pitcher-id bvp)
+       (:air-outs bvp)
+       (:at-bats bvp)
+       (:base-on-balls bvp)
+       (:catchers-interference bvp)
+       (:doubles bvp)
+       (:games-played bvp)
+       (:ground-into-double-play bvp)
+       (:ground-into-triple-play bvp)
+       (:ground-outs bvp)
+       (:hit-by-pitch bvp)
+       (:hits bvp)
+       (:home-runs bvp)
+       (:intentional-walks bvp)
+       (:left-on-base bvp)
+       (:number-of-pitches bvp)
+       (:plate-appearances bvp)
+       (:rbi bvp)
+       (:sac-bunts bvp)
+       (:sac-flies bvp)
+       (:strike-outs bvp)
+       (:total-bases bvp)
+       (:triples bvp)])
+    bvps)))
 
 (defn player-batting-stats-already-stored
   [ds player-id season]
   (some?
-   (jdbc/execute-one! ds
-                      [(format player-batting-stats-already-stored-query player-id season)]
-                      {:return-keys true :builder-fn rs/as-unqualified-kebab-maps})))
+   (db-core/execute-one!
+    ds
+    [player-batting-stats-already-stored-query player-id season])))
 
 (defn player-pitching-stats-already-stored
   [ds player-id season]
   (some?
-   (jdbc/execute-one! ds
-                      [(format player-pitching-stats-already-stored-query player-id season)]
-                      {:return-keys true :builder-fn rs/as-unqualified-kebab-maps})))
+   (db-core/execute-one!
+    ds
+    [player-pitching-stats-already-stored-query player-id season])))
 
 (defn season-hits-aggregates
   [ds season]
-  (jdbc/execute-one! ds
-                     [(format season-hits-aggregates-query season)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [season-hits-aggregates-query season]))

@@ -1,11 +1,10 @@
 (ns dev.russell.bts-picker.db.models.game-type
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO game_types (id, description, created_at, updated_at)
-VALUES('%s', '%s', now(), now())
+VALUES(?, ?, now(), now())
 ON CONFLICT (id)
 DO UPDATE SET
  description = EXCLUDED.description,
@@ -13,18 +12,25 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-id-query
-"
-SELECT * FROM game_types WHERE id = '%s';
+  "
+SELECT * FROM game_types WHERE id = ?;
 ")
 
 (defn upsert
   [ds game-type]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:id game-type) (:description game-type))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:id game-type) (:description game-type)]))
+
+(defn upsert-batch
+  [ds game-types]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [game-type] [(:id game-type) (:description game-type)]) game-types)))
 
 (defn get-by-id
   [ds id]
-  (jdbc/execute-one! ds
-                     [(format get-by-id-query id)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-id-query id]))

@@ -1,11 +1,10 @@
 (ns dev.russell.bts-picker.db.models.team
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO teams (id, name, venue_id, team_code, abbreviation, team_name, location_name, league_id, division_id, created_at, updated_at)
-VALUES(%d, '%s', %d, '%s', '%s', '%s', '%s', %d, %d, now(), now())
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now())
 ON CONFLICT (id)
 DO UPDATE SET
  name = EXCLUDED.name,
@@ -20,29 +19,36 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-id-query
-"
-SELECT * FROM teams WHERE id = '%d';
+  "
+SELECT * FROM teams WHERE id = ?;
 ")
 
 (def ^:private get-all-query
-"
+  "
 SELECT * FROM teams;
 ")
 
 (defn upsert
   [ds team]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:id team) (:name team) (:venue-id team) (:team-code team) (:abbreviation team) (:team-name team) (:location-name team) (:league-id team) (:division-id team))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:id team) (:name team) (:venue-id team) (:team-code team) (:abbreviation team) (:team-name team) (:location-name team) (:league-id team) (:division-id team)]))
+
+(defn upsert-batch
+  [ds teams]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [team] [(:id team) (:name team) (:venue-id team) (:team-code team) (:abbreviation team) (:team-name team) (:location-name team) (:league-id team) (:division-id team)]) teams)))
 
 (defn get-by-id
   [ds id]
-  (jdbc/execute-one! ds
-                     [(format get-by-id-query id)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-id-query id]))
 
 (defn get-all
   [ds]
-  (jdbc/execute! ds
-                 [get-all-query]
-                 {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute!
+   ds
+   [get-all-query]))

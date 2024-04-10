@@ -12,7 +12,7 @@
                  [migratus "1.3.6"]
                  [clojure.java-time "0.3.3"]
                  [org.clojure/tools.cli "1.0.206"]
-                 [org.clojure/tools.trace "0.7.11"]
+                 [org.clojure/tools.trace "0.8.0"]
                  [com.taoensso/timbre "5.2.1"]
                  [org.clojure/test.check "1.1.1"]
                  [com.gfredericks/test.chuck "0.2.13"]]

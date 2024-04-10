@@ -1,11 +1,11 @@
 (ns dev.russell.bts-picker.db.models.game
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [java-time]
+            [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
- "
+  "
 INSERT INTO games (id, date, date_time, away_team, home_team, series_game_number, games_in_series, season, game_type, venue, double_header, day_night, created_at, updated_at)
-VALUES(%d, '%s', '%s', %d, %d, %d, %d, '%s', '%s', %d, %b, '%s', now(), now())
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now(), now())
 ON CONFLICT (id)
 DO UPDATE SET
  date = EXCLUDED.date,
@@ -23,13 +23,13 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-id-query
- "
-SELECT * FROM games WHERE id = %d;
+  "
+SELECT * FROM games WHERE id = ?;
 ")
 
 (def ^:private get-by-date-query
- "
-SELECT * FROM games WHERE date = '%s';
+  "
+SELECT * FROM games WHERE date = ?;
 ")
 
 (def ^:private get-matchups-by-date-query
@@ -40,7 +40,7 @@ SELECT gtr.game_id, gtr.team_id, gtr.roster, gtr.side, pp.player_id AS probable_
  LEFT JOIN rosters r
  ON g.away_team = r.team_id
  OR g.home_team = r.team_id
- WHERE g.date = '%s'
+ WHERE g.date = ?
  GROUP BY g.id, r.team_id) AS gtr
 LEFT JOIN probable_pitchers pp
 ON gtr.game_id = pp.game_id
@@ -49,21 +49,16 @@ WHERE pp.side = gtr.side;
 
 (defn upsert
   [ds game]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:id game) (:date game) (:date-time game) (:away-team game) (:home-team game) (:series-game-number game) (:games-in-series game) (:season game) (:game-type game) (:venue game) (:double-header game) (:day-night game))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:id game) (:date game) (:date-time game) (:away-team game) (:home-team game) (:series-game-number game) (:games-in-series game) (:season game) (:game-type game) (:venue game) (:double-header game) (:day-night game)]))
 
-(defn get-by-id
-  [ds id]
-  (jdbc/execute-one! ds
-                     [(format get-by-id-query id)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
-
-(defn get-by-date
-  [ds date]
-  (jdbc/execute! ds
-                 [(format get-by-date-query date)]
-                 {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+(defn upsert-batch
+  [ds games]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [game] [(:id game) (:date game) (:date-time game) (:away-team game) (:home-team game) (:series-game-number game) (:games-in-series game) (:season game) (:game-type game) (:venue game) (:double-header game) (:day-night game)]) games)))
 
 (defn upsert-games
   [ds schedule]
@@ -72,7 +67,7 @@ WHERE pp.side = gtr.side;
        (map (fn [game]
               {:id (:gamePk game)
                :date (:officialDate game)
-               :date-time (:gameDate game)
+               :date-time (java-time/instant(:gameDate game))
                :away-team (:id (:team (:away (:teams game))))
                :home-team (:id (:team (:home (:teams game))))
                :series-game-number (:seriesGameNumber game)
@@ -82,8 +77,19 @@ WHERE pp.side = gtr.side;
                :venue (:id (:venue game))
                :double-header (= (:doubleHeader game) "Y")
                :day-night (:dayNight game)}))
-       (map (partial upsert ds))
-       doall))
+       (upsert-batch ds)))
+
+(defn get-by-id
+  [ds id]
+  (db-core/execute-one!
+   ds
+   [get-by-id-query id]))
+
+(defn get-by-date
+  [ds date]
+  (db-core/execute!
+   ds
+   [get-by-date-query date]))
 
 (defn get-matchups-by-date
   [ds date]
@@ -97,7 +103,7 @@ WHERE pp.side = gtr.side;
          (assoc acc (:game-id cur) (assoc existing-side side side-map))
          (assoc acc (:game-id cur) {side side-map}))))
    {}
-   (jdbc/execute! ds
-                  [(format get-matchups-by-date-query date)]
-                  {:return-keys true :builder-fn rs/as-unqualified-kebab-maps})))
+   (db-core/execute!
+    ds
+    [get-matchups-by-date-query date])))
 

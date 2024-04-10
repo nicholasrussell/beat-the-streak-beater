@@ -1,11 +1,10 @@
 (ns dev.russell.bts-picker.db.models.standing-type
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO standing_types (name, description, created_at, updated_at)
-VALUES('%s', '%s', now(), now())
+VALUES(?, ?, now(), now())
 ON CONFLICT (name)
 DO UPDATE SET
  description = EXCLUDED.description,
@@ -13,18 +12,25 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-name-query
-"
-SELECT * FROM standing_types WHERE name = '%s';
+  "
+SELECT * FROM standing_types WHERE name = ?;
 ")
 
 (defn upsert
   [ds standing-type]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:name standing-type) (:description standing-type))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:name standing-type) (:description standing-type)]))
+
+(defn upsert-batch
+  [ds standing-types]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [standing-type] [(:name standing-type) (:description standing-type)]) standing-types)))
 
 (defn get-by-name
   [ds id]
-  (jdbc/execute-one! ds
-                     [(format get-by-name-query id)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-name-query id]))

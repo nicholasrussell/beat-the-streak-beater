@@ -1,11 +1,10 @@
 (ns dev.russell.bts-picker.db.models.division
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO divisions (id, code, name, sport_id, league_id, created_at, updated_at)
-VALUES(%d, '%s', '%s', %d, %d, now(), now())
+VALUES(?, ?, ?, ?, ?, now(), now())
 ON CONFLICT (id)
 DO UPDATE SET
  code = EXCLUDED.code,
@@ -16,18 +15,25 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-id-query
-"
-SELECT * FROM divisions WHERE id = %d;
+  "
+SELECT * FROM divisions WHERE id = ?;
 ")
 
 (defn upsert
   [ds division]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:id division) (:code division) (:name division) (:sport-id division) (:league-id division))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:id division) (:code division) (:name division) (:sport-id division) (:league-id division)]))
+
+(defn upsert-batch
+  [ds divisions]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [division] [(:id division) (:code division) (:name division) (:sport-id division) (:league-id division)]) divisions)))
 
 (defn get-by-id
   [ds id]
-  (jdbc/execute-one! ds
-                     [(format get-by-id-query id)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-id-query id]))

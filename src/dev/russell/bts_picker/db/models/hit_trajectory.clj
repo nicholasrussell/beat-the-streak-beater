@@ -1,30 +1,37 @@
 (ns dev.russell.bts-picker.db.models.hit-trajectory
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO hit_trajectories (code, description, created_at, updated_at)
-VALUES('%s', '%s', now(), now())
+VALUES(?, ?, now(), now())
 ON CONFLICT (code)
 DO UPDATE SET
  description = EXCLUDED.description,
- updated_at = EXCLUDED.updated_at;
+ updated_at = EXCLUDED.updated_at
+RETURNING *;
 ")
 
 (def ^:private get-by-code-query
-"
-SELECT * FROM hit_trajectories WHERE code = '%s';
+  "
+SELECT * FROM hit_trajectories WHERE code = ?;
 ")
 
 (defn upsert
   [ds hit-trajectory]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:code hit-trajectory) (:description hit-trajectory))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:code hit-trajectory) (:description hit-trajectory)]))
+
+(defn upsert-batch
+  [ds hit-trajectories]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [hit-trajectory] [(:code hit-trajectory) (:description hit-trajectory)]) hit-trajectories)))
 
 (defn get-by-code
   [ds code]
-  (jdbc/execute-one! ds
-                     [(format get-by-code-query code)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-code-query code]))

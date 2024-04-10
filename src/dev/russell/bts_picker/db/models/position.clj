@@ -1,11 +1,10 @@
 (ns dev.russell.bts-picker.db.models.position
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO positions (code, abbreviation, display_name, type, game_position, fielder, outfield, pitcher, created_at, updated_at)
-VALUES('%s', '%s', '%s', '%s', %b, %b, %b, %b, now(), now())
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, now(), now())
 ON CONFLICT (code)
 DO UPDATE SET
  abbreviation = EXCLUDED.abbreviation,
@@ -19,18 +18,25 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-code-query
-"
-SELECT * FROM positions WHERE code = '%s';
+  "
+SELECT * FROM positions WHERE code = ?;
 ")
 
 (defn upsert
   [ds position]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:code position) (:abbreviation position) (:display-name position) (:type position) (:game-position position) (:fielder position) (:outfield position) (:pitcher position))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:code position) (:abbreviation position) (:display-name position) (:type position) (:game-position position) (:fielder position) (:outfield position) (:pitcher position)]))
+
+(defn upsert-batch
+  [ds positions]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [position] [(:code position) (:abbreviation position) (:display-name position) (:type position) (:game-position position) (:fielder position) (:outfield position) (:pitcher position)]) positions)))
 
 (defn get-by-code
   [ds code]
-  (jdbc/execute-one! ds
-                     [(format get-by-code-query code)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-code-query code]))

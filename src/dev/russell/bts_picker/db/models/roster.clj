@@ -1,11 +1,10 @@
 (ns dev.russell.bts-picker.db.models.roster
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO rosters (player_id, team_id, status, created_at, updated_at)
-VALUES(%d, %d, '%s', now(), now())
+VALUES(?, ?, ?, now(), now())
 ON CONFLICT (player_id)
 DO UPDATE SET
  team_id = EXCLUDED.team_id,
@@ -14,29 +13,36 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-team-id-query
-"
-SELECT * FROM rosters WHERE team_id = %d AND status = 'A';
+  "
+SELECT * FROM rosters WHERE team_id = ? AND status = 'A';
 ")
 
 (def ^:private delete-by-team-id-query
-"
-DELETE FROM rosters WHERE team_id = %d;
+  "
+DELETE FROM rosters WHERE team_id = ?;
 ")
 
 (defn upsert
   [ds roster]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:player-id roster) (:team-id roster) (:status roster))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:player-id roster) (:team-id roster) (:status roster)]))
+
+(defn upsert-batch
+  [ds rosters]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [roster] [(:player-id roster) (:team-id roster) (:status roster)]) rosters)))
 
 (defn get-by-team-id
   [ds team-id]
-  (jdbc/execute-one! ds
-                     [(format get-by-team-id-query team-id)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-team-id-query team-id]))
 
 (defn delete-by-team-id
   [ds team-id]
-  (jdbc/execute! ds
-                 [(format delete-by-team-id-query team-id)]
-                 {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute!
+   ds
+   [delete-by-team-id-query team-id]))

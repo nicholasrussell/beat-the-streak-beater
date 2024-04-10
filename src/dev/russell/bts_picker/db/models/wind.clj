@@ -1,11 +1,10 @@
 (ns dev.russell.bts-picker.db.models.wind
-  (:require [next.jdbc :as jdbc]
-            [next.jdbc.result-set :as rs]))
+  (:require [dev.russell.bts-picker.db.core :as db-core]))
 
 (def ^:private upsert-query
-"
+  "
 INSERT INTO winds (code, description, created_at, updated_at)
-VALUES('%s', '%s', now(), now())
+VALUES(?, ?, now(), now())
 ON CONFLICT (code)
 DO UPDATE SET
  description = EXCLUDED.description,
@@ -13,18 +12,25 @@ DO UPDATE SET
 ")
 
 (def ^:private get-by-code-query
-"
-SELECT * FROM winds WHERE code = '%s';
+  "
+SELECT * FROM winds WHERE code = ?;
 ")
 
 (defn upsert
   [ds wind]
-  (jdbc/execute-one! ds
-                     [(format upsert-query (:code wind) (:description wind))]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [upsert-query (:code wind) (:description wind)]))
+
+(defn upsert-batch
+  [ds winds]
+  (db-core/execute-batch!
+   ds
+   upsert-query
+   (mapv (fn [wind] [(:code wind) (:description wind)]) winds)))
 
 (defn get-by-code
   [ds code]
-  (jdbc/execute-one! ds
-                     [(format get-by-code-query code)]
-                     {:return-keys true :builder-fn rs/as-unqualified-kebab-maps}))
+  (db-core/execute-one!
+   ds
+   [get-by-code-query code]))
