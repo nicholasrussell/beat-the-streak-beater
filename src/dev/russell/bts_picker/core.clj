@@ -171,9 +171,7 @@
                                        (concat [(-> matchup :home :probable-pitcher-id)]
                                                [(-> matchup :away :probable-pitcher-id)])))
                                     (remove nil?)
-                                    pitcher-ranking/score-pitchers
-                                    (map deref)
-                                    (into []))]
+                                    (pitcher-ranking/score-pitchers current-season))]
             (println pitcher-scores)))
         (let [current-season (season/get-current-id ds) ; TODO get from date
               schedule (schedule date)
@@ -183,11 +181,11 @@
               batter-scores (->> @rosters
                                  (mapcat (fn [roster] (map :player-id (:roster roster))))
                                  (batter-ranking/score-batters current-season))
+              pitcher-scores (->> @probable-pitchers
+                                  (map :player-id)
+                                  (pitcher-ranking/score-pitchers current-season))
               batter-vs-pitcher-scores (->>
                                         @(batter-vs-pitcher-ranking/score-batters-vs-pitchers matchups)
                                         (map deref)
-                                        (into []))
-              pitcher-scores (->> (pitcher-ranking/score-pitchers (map :player-id @probable-pitchers))
-                                  (map deref)
-                                  (into []))]
+                                        (into []))]
           (print-picks rosters (take 10 (rank/rank-batters matchups batter-scores batter-vs-pitcher-scores pitcher-scores))))))))

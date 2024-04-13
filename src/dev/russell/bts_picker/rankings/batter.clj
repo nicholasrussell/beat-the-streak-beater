@@ -1,7 +1,5 @@
 (ns dev.russell.bts-picker.rankings.batter
-  (:require [dev.russell.batboy.people.core :as people]
-            [dev.russell.bts-picker.db.core :as db]
-            [dev.russell.bts-picker.db.models.season :as season]
+  (:require [dev.russell.bts-picker.db.core :as db]
             [dev.russell.bts-picker.db.models.player-stats :as player-stats]))
 
 (defn- range-normalized-score
@@ -43,7 +41,7 @@
 (defn score-batters
   [season player-ids]
   (let [ds (db/get-datasource)
-        season-aggregates (player-stats/season-hits-aggregates ds season)
+        season-aggregates (player-stats/season-batting-aggregates ds season)
         stats (player-stats/player-season-batting-stats ds season player-ids)]
     (->> stats
          (pmap (partial score-batter season-aggregates))

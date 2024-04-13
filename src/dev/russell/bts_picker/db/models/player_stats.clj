@@ -351,7 +351,7 @@ SELECT player_id, season FROM player_stats_batting WHERE player_id = ? AND seaso
 SELECT player_id, season FROM player_stats_pitching WHERE player_id = ? AND season = ?;
 ")
 
-(def ^:private season-hits-aggregates-query
+(def ^:private season-batting-aggregates-query
   "
 SELECT
 	SUM(i.plate_appearances) AS plate_appearances_total, MIN(i.plate_appearances) AS plate_appearances_min, MAX(i.plate_appearances) AS plate_appearances_max, AVG(i.plate_appearances) AS plate_appearances_avg, STDDEV_POP(i.plate_appearances) AS plate_appearances_std_dev,
@@ -363,11 +363,30 @@ FROM
    WHERE season = ? AND plate_appearances > 0) i;
 ")
 
+(def ^:private season-pitching-aggregates-query
+  "
+SELECT
+	SUM(i.batters_faced) AS batters_faced_total, MIN(i.batters_faced) AS batters_faced_min, MAX(i.batters_faced) AS batters_faced_max, AVG(i.batters_faced) AS batters_faced_avg, STDDEV_POP(i.batters_faced) AS batters_faced_std_dev,
+	SUM(i.hits) AS hits_total, MIN(i.hits) AS hits_min, MAX(i.hits) AS hits_max, AVG(i.hits) AS hits_avg, STDDEV_POP(i.hits) AS hits_std_dev,
+	MIN(i.hits_per_batter_faced) AS hits_per_batter_faced_min, MAX(i.hits_per_batter_faced) AS hits_per_batter_faced_max, AVG(i.hits_per_batter_faced) AS hits_per_batter_faced_avg, STDDEV_POP(i.hits_per_batter_faced) AS hits_per_batter_faced_std_dev
+FROM
+  (SELECT stats.*, stats.hits::float / stats.batters_faced::float AS hits_per_batter_faced
+   FROM player_stats_pitching stats
+   WHERE season = ? AND batters_faced > 0) i
+")
+
 (def ^:private player-season-batting-stats-query
   "
 SELECT psb.*, CASE WHEN psb.plate_appearances = 0 THEN 0 ELSE (psb.hits::float / psb.plate_appearances::float) END AS hits_percentage
 FROM player_stats_batting psb
 WHERE psb.player_id = ANY(?) AND psb.season = ?;
+")
+
+(def ^:private player-season-pitching-stats-query
+  "
+SELECT psp.*, CASE WHEN psp.batters_faced = 0 THEN 0 ELSE (psp.hits::float / psp.batters_faced::float) END AS hits_per_batter_faced
+FROM player_stats_pitching psp
+WHERE psp.player_id = ANY(?) AND psp.season = ?;
 ")
 
 (defn upsert-batting-stats
@@ -619,15 +638,27 @@ WHERE psb.player_id = ANY(?) AND psb.season = ?;
     ds
     [player-pitching-stats-already-stored-query player-id season])))
 
-(defn season-hits-aggregates
+(defn season-batting-aggregates
   [ds season]
   (db-core/execute-one!
    ds
-   [season-hits-aggregates-query season]))
+   [season-batting-aggregates-query season]))
+
+(defn season-pitching-aggregates
+  [ds season]
+  (db-core/execute-one!
+   ds
+   [season-pitching-aggregates-query season]))
 
 (defn player-season-batting-stats
   [ds season player-ids]
   (db-core/execute!
    ds
    [player-season-batting-stats-query (int-array player-ids) season]))
+
+(defn player-season-pitching-stats
+  [ds season player-ids]
+  (db-core/execute!
+   ds
+   [player-season-pitching-stats-query (int-array player-ids) season]))
 
