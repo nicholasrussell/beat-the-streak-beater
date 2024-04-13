@@ -389,6 +389,13 @@ FROM player_stats_pitching psp
 WHERE psp.player_id = ANY(?) AND psp.season = ?;
 ")
 
+(def ^:private batter-vs-pitcher-stats-query
+  "
+SELECT bvp.*, CASE WHEN bvp.plate_appearances = 0 THEN 0 ELSE (bvp.hits::float / bvp.plate_appearances::float) END AS hits_percentage
+FROM batter_vs_pitcher bvp
+WHERE bvp.batter_id = ? AND bvp.pitcher_id = ?;
+")
+
 (defn upsert-batting-stats
   [ds pbs]
   (db-core/execute-one!
@@ -661,4 +668,10 @@ WHERE psp.player_id = ANY(?) AND psp.season = ?;
   (db-core/execute!
    ds
    [player-season-pitching-stats-query (int-array player-ids) season]))
+
+(defn batter-vs-pitcher-stats
+  [ds batter-id pitcher-id]
+  (db-core/execute-one!
+   ds
+   [batter-vs-pitcher-stats-query batter-id pitcher-id]))
 

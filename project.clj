@@ -10,7 +10,7 @@
                  [com.github.seancorfield/next.jdbc "1.2.780"]
                  [org.postgresql/postgresql "42.3.4"]
                  [migratus "1.3.6"]
-                 [clojure.java-time "0.3.3"]
+                 [clojure.java-time "1.4.2"]
                  [org.clojure/tools.cli "1.0.206"]
                  [org.clojure/tools.trace "0.8.0"]
                  [com.taoensso/timbre "5.2.1"]

@@ -22,6 +22,11 @@ SELECT * FROM rosters WHERE team_id = ? AND status = 'A';
 DELETE FROM rosters WHERE team_id = ?;
 ")
 
+(def ^:private get-by-player-id-query
+  "
+SELECT * FROM rosters WHERE player_id = ?;
+")
+
 (defn upsert
   [ds roster]
   (db-core/execute-one!
@@ -46,3 +51,10 @@ DELETE FROM rosters WHERE team_id = ?;
   (db-core/execute!
    ds
    [delete-by-team-id-query team-id]))
+
+(defn get-by-player-id
+  [ds player-id]
+  (db-core/execute-one!
+   ds
+   [get-by-player-id-query player-id]))
+

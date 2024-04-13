@@ -3,41 +3,44 @@
 (defn- combine-scores
   [matchups batter-scores batter-vs-pitcher-scores pitcher-scores]
   (let [scores (reduce (fn [acc batter-score]
-                         (assoc acc (:player-id batter-score) {:batter-score (:score batter-score)}))
-                       {}
-                       batter-scores)
-        scores (reduce (fn [acc batter-vs-pitcher-scores]
                          (assoc
                           acc
-                          (:player-id batter-vs-pitcher-scores)
-                          (if-let [existing (get acc (:player-id batter-vs-pitcher-scores))]
-                            (merge existing {:batter-vs-pitcher-score (:score batter-vs-pitcher-scores)})
-                            {:batter-vs-pitcher-score (:score batter-vs-pitcher-scores)})))
+                          (:player-id batter-score)
+                          {:batter-score (:score batter-score)}))
+                       {}
+                       batter-scores)
+        scores (reduce (fn [acc batter-vs-pitcher-score]
+                         (assoc
+                          acc
+                          (:player-id batter-vs-pitcher-score)
+                          (if-let [existing (get acc (:player-id batter-vs-pitcher-score))]
+                            (merge existing {:batter-vs-pitcher-score (:score batter-vs-pitcher-score)})
+                            {:batter-vs-pitcher-score (:score batter-vs-pitcher-score)})))
                        scores
                        batter-vs-pitcher-scores)
         scores (let [pitcher-scores
-                     (reduce (fn [acc pitcher-score]
-                               (let [other-team-roster (reduce
-                                                        (fn [_ matchup]
-                                                          (if (= (-> matchup :teams :away :pitcher :player-id)
-                                                                 (:player-id pitcher-score))
-                                                            (reduced (->> matchup :teams :home :roster (map :player-id)))
-                                                            (if (= (-> matchup :teams :home :pitcher :player-id)
-                                                                   (:player-id pitcher-score))
-                                                              (reduced (->> matchup :teams :away :roster (map :player-id)))
-                                                              nil)))
-                                                        nil
-                                                        @matchups)]
-                                 (if (nil? other-team-roster)
-                                   acc
-                                   (concat
-                                    acc
-                                    (map (fn [batter-id]
-                                           {:player-id batter-id
-                                            :score (:score pitcher-score)})
-                                         other-team-roster)))))
-                             []
-                             pitcher-scores)]
+                     (reduce
+                      (fn [acc pitcher-score]
+                        (let [opposing-team-roster
+                              (reduce
+                               (fn [_ matchup]
+                                 (cond
+                                   (= (-> matchup :away :probable-pitcher-id) (:player-id pitcher-score)) (reduced (->> matchup :home :roster-ids))
+                                   (= (-> matchup :home :probable-pitcher-id) (:player-id pitcher-score)) (reduced (->> matchup :away :roster-ids))
+                                   :else nil))
+                               nil
+                               matchups)]
+                          (if (nil? opposing-team-roster)
+                            acc
+                            (concat
+                             acc
+                             (map
+                              (fn [batter-id]
+                                {:player-id batter-id
+                                 :score (:score pitcher-score)})
+                              opposing-team-roster)))))
+                      []
+                      pitcher-scores)]
                  (reduce
                   (fn [acc pitcher-score]
                     (if-let [existing (get acc (:player-id pitcher-score))]

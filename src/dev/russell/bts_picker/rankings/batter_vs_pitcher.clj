@@ -1,37 +1,15 @@
 (ns dev.russell.bts-picker.rankings.batter-vs-pitcher
-  (:require [dev.russell.batboy.people.core :as people]))
-
-(defn- batter-vs-pitcher-stats
-  [batter-id pitcher-id]
-  (future
-    {:player-id batter-id
-     :raw-stats (->> @(people/get-person-stats {:path-params {:id batter-id}
-                                                :query-params {:stats "vsPlayerTotal"
-                                                               :group "hitting"
-                                                               :opposingPlayerId pitcher-id}})
-                    :body
-                    :stats)}))
-
-(defn- raw-scores
-  [raw-stats]
-  (let [total-stats (->> raw-stats
-                         (filter #(= (:displayName (:type %)) "vsPlayerTotal"))
-                         first
-                         :splits
-                         first
-                         :stat)]
-    {:total-hit-percentage (if (or (nil? (:plateAppearances total-stats)) (<= (:plateAppearances total-stats) 0))
-                             0.0
-                             (double (/ (:hits total-stats) (:plateAppearances total-stats))))}))
+  (:require [dev.russell.bts-picker.db.core :as db]
+            [dev.russell.bts-picker.db.models.player-stats :as player-stats]))
 
 (defn- weight
-  [key score]
-  (condp = key
-    :total-hit-percentage (* score (/ 1.0 1.0))
+  [stat value]
+  (condp = stat
+    :hits-percentage value
     nil))
 
 (defn- apply-weights
-  [scores]
+  [stats]
   (reduce-kv
    (fn [m k v]
      (let [w (weight k v)]
@@ -39,41 +17,36 @@
          (assoc m k w)
          m)))
    {}
-   scores))
+   stats))
 
 (defn- sum-score
   [scores]
   (reduce + 0 scores))
 
-(defn- player-score
-  [player-id raw-stats]
-  (let [raw-scores (raw-scores raw-stats)
-        weighted-scores (apply-weights raw-scores)]
-    {:player-id player-id
-     :score-metadata {:raw-scores raw-scores
+(defn- score-batter-vs-pitcher
+  [stats]
+  (let [weighted-scores (apply-weights stats)]
+    {:player-id (:batter-id stats)
+     :pitcher-id (:pitcher-id stats)
+     :score-metadata {:raw-scores stats
                       :weighted-scores weighted-scores}
      :score (sum-score (vals weighted-scores))}))
 
-(defn- score-batter
-  [player-stats]
-  (future
-    (player-score (:player-id @player-stats)
-                  (:raw-stats @player-stats))))
-
 (defn score-batters-vs-pitchers
   [matchups]
-  (future
-    (->>
-     @matchups
-     (mapcat (fn [matchup]
-               (let [away-team-roster (-> matchup :teams :away :roster)
-                     home-team-roster (-> matchup :teams :home :roster)
-                     away-team-pitcher-id (-> matchup :teams :away :pitcher :player-id)
-                     home-team-pitcher-id (-> matchup :teams :home :pitcher :player-id)]
-                 (mapcat
-                  identity
-                  [(when home-team-pitcher-id
-                     (map #(batter-vs-pitcher-stats (:player-id %) home-team-pitcher-id) away-team-roster))
-                   (when away-team-pitcher-id
-                     (map #(batter-vs-pitcher-stats (:player-id %) away-team-pitcher-id) home-team-roster))]))))
-     (map score-batter))))
+  (let [ds (db/get-datasource)]
+    (->> matchups
+         (mapcat (fn [matchup]
+                   (let [away-team-roster (-> matchup :away :roster-ids)
+                         home-team-roster (-> matchup :home :roster-ids)
+                         away-team-pitcher-id (-> matchup :away :probable-pitcher-id)
+                         home-team-pitcher-id (-> matchup :home :probable-pitcher-id)]
+                     (mapcat
+                      identity
+                      [(when home-team-pitcher-id
+                         (map (fn [batter-id] {:batter-id batter-id :pitcher-id home-team-pitcher-id}) away-team-roster))
+                       (when away-team-pitcher-id
+                         (map (fn [batter-id] {:batter-id batter-id :pitcher-id away-team-pitcher-id}) home-team-roster))]))))
+         (pmap (fn [bp] (player-stats/batter-vs-pitcher-stats ds (:batter-id bp) (:pitcher-id bp))))
+         (pmap score-batter-vs-pitcher)
+         (into []))))
