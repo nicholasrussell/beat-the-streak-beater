@@ -353,7 +353,21 @@ SELECT player_id, season FROM player_stats_pitching WHERE player_id = ? AND seas
 
 (def ^:private season-hits-aggregates-query
   "
-SELECT COUNT(*), SUM(hits), MIN(hits), MAX(hits), AVG(hits), STDDEV_POP(hits) FROM player_stats_batting WHERE season = ?;
+SELECT
+	SUM(i.plate_appearances) AS plate_appearances_total, MIN(i.plate_appearances) AS plate_appearances_min, MAX(i.plate_appearances) AS plate_appearances_max, AVG(i.plate_appearances) AS plate_appearances_avg, STDDEV_POP(i.plate_appearances) AS plate_appearances_std_dev,
+	SUM(i.hits) AS hits_total, MIN(i.hits) AS hits_min, MAX(i.hits) AS hits_max, AVG(i.hits) AS hits_avg, STDDEV_POP(i.hits) AS hits_std_dev,
+	MIN(i.hits_percentage) AS hits_percentage_min, MAX(i.hits_percentage) AS hits_percentage_max, AVG(i.hits_percentage) AS hits_percentage_avg, STDDEV_POP(i.hits_percentage) AS hits_percentage_std_dev
+FROM
+  (SELECT stats.*, stats.hits::float / stats.plate_appearances::float AS hits_percentage
+   FROM player_stats_batting stats
+   WHERE season = ? AND plate_appearances > 0) i;
+")
+
+(def ^:private player-season-batting-stats-query
+  "
+SELECT psb.*, CASE WHEN psb.plate_appearances = 0 THEN 0 ELSE (psb.hits::float / psb.plate_appearances::float) END AS hits_percentage
+FROM player_stats_batting psb
+WHERE psb.player_id = ANY(?) AND psb.season = ?;
 ")
 
 (defn upsert-batting-stats
@@ -610,3 +624,10 @@ SELECT COUNT(*), SUM(hits), MIN(hits), MAX(hits), AVG(hits), STDDEV_POP(hits) FR
   (db-core/execute-one!
    ds
    [season-hits-aggregates-query season]))
+
+(defn player-season-batting-stats
+  [ds season player-ids]
+  (db-core/execute!
+   ds
+   [player-season-batting-stats-query (int-array player-ids) season]))
+

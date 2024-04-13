@@ -17,6 +17,7 @@
             [dev.russell.bts-picker.rankings.rank :as rank]
             [dev.russell.bts-picker.db.models.game :as games]
             [dev.russell.bts-picker.db.models.probable-pitcher :as probable-pitchers]
+            [dev.russell.bts-picker.db.models.season :as season]
             [dev.russell.bts-picker.db.core :as db]))
 
 (defn schedule
@@ -149,21 +150,21 @@
     (when (:errors opts)
       (throw (IllegalArgumentException. (string/join "\n" (:errors opts)))))
     (config/initialize (read-string (slurp "conf/bts-picker.edn")))
-    (let [date (-> opts :options :date)]
+    (let [date (-> opts :options :date)
+          ds (db/get-datasource)]
       (if (-> opts :options :new)
-        (let [ds (db/get-datasource)]
+        (do
           (when (or (-> opts :options :force) (empty? (games/get-by-date ds date)))
             (seed/seed-daily date))
-          (let [games (games/get-by-date ds date)
+          (let [current-season (season/get-current-id ds) ; TODO get from date
+                games (games/get-by-date ds date)
                 matchups (games/get-matchups-by-date ds date)
                 batter-scores (->> (vals matchups)
                                    (mapcat
                                     (fn [matchup]
                                       (concat (-> matchup :home :roster-ids)
                                               (-> matchup :away :roster-ids))))
-                                   batter-ranking/score-batters
-                                   (map deref)
-                                   (into []))
+                                   (batter-ranking/score-batters current-season))
                 pitcher-scores (->> (vals matchups)
                                     (mapcat
                                      (fn [matchup]
@@ -174,15 +175,14 @@
                                     (map deref)
                                     (into []))]
             (println pitcher-scores)))
-        (let [schedule (schedule date)
+        (let [current-season (season/get-current-id ds) ; TODO get from date
+              schedule (schedule date)
               probable-pitchers (deprecated-probable-pitchers schedule)
               rosters (deprecated-rosters schedule)
               matchups (deprecated-matchups schedule rosters probable-pitchers)
               batter-scores (->> @rosters
                                  (mapcat (fn [roster] (map :player-id (:roster roster))))
-                                 batter-ranking/score-batters
-                                 (map deref)
-                                 (into []))
+                                 (batter-ranking/score-batters current-season))
               batter-vs-pitcher-scores (->>
                                         @(batter-vs-pitcher-ranking/score-batters-vs-pitchers matchups)
                                         (map deref)
