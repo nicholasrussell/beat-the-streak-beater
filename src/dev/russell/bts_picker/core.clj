@@ -51,7 +51,7 @@
     (let [date (-> opts :options :date)
           ds (db/get-datasource)]
       (when (or (-> opts :options :force) (empty? (games/get-by-date ds date)))
-        (seed/seed-daily date))
+        (seed/hydrate date))
       (let [current-season (season/get-current-id ds) ; TODO get from date
             games (games/get-by-date ds date)
             matchups (games/get-matchups-by-date ds date)

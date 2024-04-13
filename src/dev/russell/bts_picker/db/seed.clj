@@ -245,7 +245,7 @@
        (team/upsert-batch ds))
   (log/debug :seed/finished :teams))
 
-(defn seed-roster-player
+(defn hydrate-roster-player
   [ds player-id]
   (->> @(api-people/get-person {:path-params {:id player-id}})
        :body
@@ -278,14 +278,14 @@
        first
        (player/upsert ds)))
 
-(defn seed-rosters
+(defn hydrate-rosters
   [ds]
-  (log/debug :seed/starting :rosters)
+  (log/debug :hydate/starting :rosters)
   (->> (team/get-all ds)
        (pmap :id)
        (pmap
         (fn [team-id]
-          (log/debug :seed/starting {:roster team-id})
+          #_(log/debug :hydrate/starting {:roster team-id})
           (let [roster (->> @(api-teams/get-team-roster {:path-params {:id team-id}
                                                          :query-params {:rosterType "active"
                                                                         :season (season/get-current-id ds)}})
@@ -297,14 +297,14 @@
             (doall
              (pmap
               (fn [roster-element]
-                (seed-roster-player ds (:id (:person roster-element)))
+                (hydrate-roster-player ds (:id (:person roster-element)))
                 (roster/upsert ds {:player-id (:id (:person roster-element))
                                    :team-id (:parentTeamId roster-element)
                                    :status (:code (:status roster-element))}))
               roster))
-            (log/debug :seed/finished {:roster team-id}))))
+            #_(log/debug :hydrate/finished {:roster team-id}))))
        doall)
-  (log/debug :seed/finished :rosters))
+  (log/debug :hydrate/finished :rosters))
 
 (defn get-player-with-stats
   [player-id]
@@ -399,9 +399,9 @@
      :wild-pitches (:wildPitches stat)
      :wins (:wins stat)}))
 
-(defn seed-previous-seasons-batting-stats
+(defn hydrate-previous-seasons-batting-stats
   [ds]
-  (log/debug :seed/starting :previous-seasons-batting-stats)
+  (log/debug :hydrate/starting :previous-seasons-batting-stats)
   (let [current-season (season/get-current-id ds)]
     (->> (player/get-active-player-ids ds)
          (remove #(player-stats/player-batting-stats-already-stored ds % current-season))
@@ -418,11 +418,11 @@
          (mapcat identity)
          (pmap map-batting-stats)
          (player-stats/upsert-batting-stats-batch ds)))
-  (log/debug :seed/finished :previous-seasons-batting-stats))
+  (log/debug :hydrate/finished :previous-seasons-batting-stats))
 
-(defn seed-current-season-batting-stats
+(defn hydrate-current-season-batting-stats
   [ds]
-  (log/debug :seed/starting :current-season-batting-stats)
+  (log/debug :hydrate/starting :current-season-batting-stats)
   (let [current-season (season/get-current-id ds)]
     (->> (player/get-active-player-ids ds)
          (pmap (fn [player-id]
@@ -464,7 +464,7 @@
                              :sacFlies 0}}))))
          (pmap map-batting-stats)
          (player-stats/upsert-batting-stats-batch ds)))
-  (log/debug :seed/finished :current-season-batting-stats))
+  (log/debug :hydrate/finished :current-season-batting-stats))
 
 (defn current-batting-stat-splits
   [ds]
@@ -484,9 +484,9 @@
   [player-id]
   (comment "https://statsapi.mlb.com/api/v1/people/677951/stats?stats=vsTeam&group=hitting&opposingTeamId=142&season=2024&language=en"))
 
-(defn seed-previous-seasons-pitching-stats
+(defn hydrate-previous-seasons-pitching-stats
   [ds]
-  (log/debug :seed/starting :previous-seasons-pitching-stats)
+  (log/debug :hydrate/starting :previous-seasons-pitching-stats)
   (let [current-season (season/get-current-id ds)]
     (->> (player/get-active-player-ids ds)
          (remove #(player-stats/player-pitching-stats-already-stored ds % current-season))
@@ -503,11 +503,11 @@
          (mapcat identity)
          (pmap map-pitching-stats)
          (player-stats/upsert-pitching-stats-batch ds)))
-  (log/debug :seed/finished :previous-seasons-pitching-stats))
+  (log/debug :hydrate/finished :previous-seasons-pitching-stats))
 
-(defn seed-current-season-pitching-stats
+(defn hydrate-current-season-pitching-stats
   [ds]
-  (log/debug :seed/starting :current-season-pitching-stats)
+  (log/debug :hydrate/starting :current-season-pitching-stats)
   (let [current-season (season/get-current-id ds)]
     (->> (player/get-active-player-ids ds)
          (pmap (fn [player-id]
@@ -568,11 +568,11 @@
                              :losses 0}}))))
          (pmap map-pitching-stats)
          (player-stats/upsert-pitching-stats-batch ds)))
-  (log/debug :seed/finished :current-season-pitching-stats))
+  (log/debug :hydrate/finished :current-season-pitching-stats))
 
-(defn seed-games
+(defn hydrate-games
   [ds date]
-  (log/debug :seed/starting :games)
+  (log/debug :hydrate/starting :games)
   (let [schedule (->> @(api-schedules/get-schedules {:multi-param-style :comma-separated
                                                      :query-params {:sportId 1
                                                                     :date date
@@ -584,16 +584,16 @@
                       (filter #(= date (:date %)))
                       first)]
     (game/upsert-games ds schedule)
-    (log/debug :seed/finished :games)
+    (log/debug :hydrate/finished :games)
     schedule))
 
-(defn seed-probable-pitchers
+(defn hydrate-probable-pitchers
   [ds schedule]
-  (log/debug :seed/starting :probable-pitchers)
+  (log/debug :hydrate/starting :probable-pitchers)
   (probable-pitcher/upsert-probable-pitchers ds schedule)
-  (log/debug :seed/finished :probable-pitchers))
+  (log/debug :hydrate/finished :probable-pitchers))
 
-(defn- seed-batter-vs-pitcher
+(defn- hydrate-batter-vs-pitcher
   [ds matchup]
   (let [stat (->> @(api-people/get-person-stats {:path-params {:id (:batter-id matchup)}
                                                  :query-params {:stats "vsPlayerTotal"
@@ -631,30 +631,30 @@
                 :triples (or (:triples stat) 0)}]
     (player-stats/upsert-batter-vs-pitcher-stats ds mapped)))
 
-(defn seed-batters-vs-pitchers
+(defn hydrate-batters-vs-pitchers
   [ds matchups]
-  (log/debug :seed/starting :batter-vs-pitcher)
+  (log/debug :hydrate/starting :batter-vs-pitcher)
   (->> matchups
        (reduce-kv
         (fn [acc _ matchup]
           (let [away-pitcher (-> matchup :away :probable-pitcher-id)
                 home-pitcher (-> matchup :home :probable-pitcher-id)
-                seed-matchup (fn [pitcher-id batter-ids]
-                               (if pitcher-id
-                                 (map (fn [batter-id]
-                                        {:batter-id batter-id
-                                         :pitcher-id pitcher-id})
-                                      batter-ids)
-                                 []))]
+                hydrate-matchup (fn [pitcher-id batter-ids]
+                                  (if pitcher-id
+                                    (map (fn [batter-id]
+                                           {:batter-id batter-id
+                                            :pitcher-id pitcher-id})
+                                         batter-ids)
+                                    []))]
             (concat
              acc
              (concat
-              (seed-matchup home-pitcher (-> matchup :away :roster-ids))
-              (seed-matchup away-pitcher (-> matchup :home :roster-ids))))))
+              (hydrate-matchup home-pitcher (-> matchup :away :roster-ids))
+              (hydrate-matchup away-pitcher (-> matchup :home :roster-ids))))))
         [])
-       (pmap (fn [bvp] (seed-batter-vs-pitcher ds bvp)))
+       (pmap (fn [bvp] (hydrate-batter-vs-pitcher ds bvp)))
        doall)
-  (log/debug :seed/finished :batter-vs-pitcher))
+  (log/debug :hydrate/finished :batter-vs-pitcher))
 
 (defn seed
   []
@@ -681,19 +681,18 @@
     (doall (map (fn [seed] (seed ds)) seeds))
     (log/info :seeds/finished {})))
 
-(defn seed-daily
+(defn hydrate
   [date]
   (let [ds (db/get-datasource)
-        seeds [seed-rosters
-               seed-previous-seasons-batting-stats
-               seed-current-season-batting-stats
-               seed-previous-seasons-pitching-stats
-               seed-current-season-pitching-stats]]
-    (log/info :seeds-daily/starting {})
-    (doall (map (fn [seed] (seed ds)) seeds))
-    (let [schedule (seed-games ds date)]
-      (seed-probable-pitchers ds schedule)
+        hydrations [hydrate-rosters
+                    hydrate-previous-seasons-batting-stats
+                    hydrate-current-season-batting-stats
+                    hydrate-previous-seasons-pitching-stats
+                    hydrate-current-season-pitching-stats]]
+    (log/info :hydrate/starting {})
+    (doall (map (fn [hydrate] (hydrate ds)) hydrations))
+    (let [schedule (hydrate-games ds date)]
+      (hydrate-probable-pitchers ds schedule)
       (let [matchups (game/get-matchups-by-date ds date)]
-        (seed-batters-vs-pitchers ds matchups)))
-    (log/info :seeds-daily/finished {})))
-
+        (hydrate-batters-vs-pitchers ds matchups)))
+    (log/info :hydrate/finished {})))
