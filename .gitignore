@@ -10,9 +10,8 @@ pom.xml.asc
 .hgignore
 .hg/
 *.csv
-conf/config.edn
 .lsp/
 .clj-kondo/
 .env
 .calva/
-conf/bts-picker.edn
+conf/*.edn

@@ -1,8 +1,8 @@
 (def VERSION (.trim (slurp "VERSION")))
 
-(defproject dev.russell/bts-picker VERSION
+(defproject dev.russell/beat-the-streak-beater VERSION
   :description "A tool to make MLB Beat the Streak picks"
-  :url "https://russell.dev/bts-picker"
+  :url "https://russell.dev/beat-the-streak-beater"
   :license {:name "apache-2.0"
             :url "https://www.apache.org/licenses/LICENSE-2.0"}
   :dependencies [[org.clojure/clojure "1.11.1"]
@@ -26,9 +26,9 @@
              :project/dev {}
              :project/test {}
              :project/dev-ops {:source-paths ["db/"]}}
-  :main dev.russell.bts-picker.core
-  :aliases {"launch" ["run" "-m" "dev.russell.bts-picker.core"]}
-  :repl-options {:init-ns dev.russell.bts-picker.core}
+  :main dev.russell.bts-beater.core
+  :aliases {"launch" ["run" "-m" "dev.russell.bts-beater.core"]}
+  :repl-options {:init-ns dev.russell.bts-beater.core}
   :deploy-branches ["master"]
   :migratus {:store :database
              :migration-dir "db/migrations/"
