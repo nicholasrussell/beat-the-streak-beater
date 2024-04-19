@@ -34,21 +34,6 @@ SELECT * FROM probable_pitchers WHERE game_id = ANY(?);
    upsert-query
    (mapv (fn [pp] [(:player-id pp) (:game-id pp) (:side pp)]) probable-pitchers)))
 
-(defn upsert-probable-pitchers
-  [ds schedule]
-  (->> schedule
-       :games
-       (mapcat (fn [game]
-                 [{:game-id (:gamePk game)
-                   :player-id (-> game :teams :away :probablePitcher :id)
-                   :side "away"}
-                  {:game-id (:gamePk game)
-                   :player-id (-> game :teams :home :probablePitcher :id)
-                   :side "home"}]))
-       (remove #(nil? (:player-id %)))
-       (upsert-batch ds)
-       doall))
-
 (defn get-by-game-id
   [ds id]
   (db-core/execute!

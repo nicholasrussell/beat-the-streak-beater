@@ -29,6 +29,11 @@ DO UPDATE SET
 SELECT * FROM players WHERE id = ?;
 ")
 
+(def ^:private get-by-ids-query
+  "
+SELECT * FROM players WHERE id = ANY(?);
+")
+
 (def ^:private get-earliest-active-season-query
   "
 SELECT min(debut_season) FROM players WHERE active = true;
@@ -62,6 +67,12 @@ SELECT id FROM players WHERE active = true;
    ds
    [get-by-id-query id]))
 
+(defn get-by-ids
+  [ds ids]
+  (db-core/execute!
+   ds
+   [get-by-ids-query (int-array ids)]))
+
 (defn get-earliest-active-season
   [ds]
   (:min
@@ -77,3 +88,4 @@ SELECT id FROM players WHERE active = true;
    (db-core/execute!
     ds
     [get-active-player-ids-query])))
+

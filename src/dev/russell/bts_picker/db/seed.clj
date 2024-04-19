@@ -590,7 +590,24 @@
 (defn hydrate-probable-pitchers
   [ds schedule]
   (log/debug :hydrate/starting :probable-pitchers)
-  (probable-pitcher/upsert-probable-pitchers ds schedule)
+  (let [probable-pitchers (->> schedule
+                               :games
+                               (mapcat (fn [game]
+                                         [{:game-id (:gamePk game)
+                                           :player-id (-> game :teams :away :probablePitcher :id)
+                                           :side "away"}
+                                          {:game-id (:gamePk game)
+                                           :player-id (-> game :teams :home :probablePitcher :id)
+                                           :side "home"}]))
+                               (remove #(nil? (:player-id %))))
+        missing-pitchers (let [hydrated-players (mapv :id (player/get-by-ids ds (map :player-id probable-pitchers)))]
+                           (->> probable-pitchers
+                                (map :player-id)
+                                (remove (fn [id] (some (fn [other-id] (= other-id id)) hydrated-players)))))]
+    (->> missing-pitchers
+         (map (partial hydrate-roster-player ds))
+         doall)
+    (probable-pitcher/upsert-batch ds probable-pitchers))
   (log/debug :hydrate/finished :probable-pitchers))
 
 (defn- hydrate-batter-vs-pitcher
@@ -692,6 +709,7 @@
     (log/info :hydrate/starting {})
     (doall (map (fn [hydrate] (hydrate ds)) hydrations))
     (let [schedule (hydrate-games ds date)]
+      ; TODO might need to re-order this to get correct stats
       (hydrate-probable-pitchers ds schedule)
       (let [matchups (game/get-matchups-by-date ds date)]
         (hydrate-batters-vs-pitchers ds matchups)))
