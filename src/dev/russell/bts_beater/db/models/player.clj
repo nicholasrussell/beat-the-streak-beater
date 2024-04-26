@@ -46,7 +46,7 @@ SELECT id FROM players WHERE active = true;
 
 (defn- escape
   [value]
-  (string/escape value {\' "''"}))
+  (string/escape (or value "") {\' "''"}))
 
 (defn upsert
   [ds player]
