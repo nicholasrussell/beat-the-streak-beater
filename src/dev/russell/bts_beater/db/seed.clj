@@ -2,6 +2,7 @@
   (:require [clojure.string :as string]
             [taoensso.timbre :as log]
             [dev.russell.batboy.divisions.core :as api-divisions]
+            [dev.russell.batboy.games.core :as api-games]
             [dev.russell.batboy.leagues.core :as api-leagues]
             [dev.russell.batboy.meta.core :as api-meta]
             [dev.russell.batboy.people.core :as api-people]
@@ -13,6 +14,7 @@
             [dev.russell.bts-beater.constants :refer [SPORT_CODE_MLB LEAGUE_CODE_AL LEAGUE_CODE_NL]]
             [dev.russell.bts-beater.db.core :as db]
             [dev.russell.bts-beater.db.models.division :as division]
+            [dev.russell.bts-beater.db.models.game-outcomes :as game-outcome]
             [dev.russell.bts-beater.db.models.game-type :as game-type]
             [dev.russell.bts-beater.db.models.game :as game]
             [dev.russell.bts-beater.db.models.hit-trajectory :as hit-trajectory]
@@ -35,7 +37,8 @@
             [dev.russell.bts-beater.db.models.team :as team]
             [dev.russell.bts-beater.db.models.venue :as venue]
             [dev.russell.bts-beater.db.models.wind :as wind]
-            [dev.russell.bts-beater.util.date.core :as date])
+            [dev.russell.bts-beater.util.date.core :as date]
+            [dev.russell.bts-beater.util.date.core :as date-util])
   (:import [java.time LocalDate]))
 
 (defn seed-game-types
@@ -587,6 +590,63 @@
     (log/debug :hydrate/finished :games)
     schedule))
 
+(defn- hydrate-hits-get-game-outcomes
+  [game]
+  (let [game-data (->> @(api-games/get-game-feed-live-diff-patch
+                         {:multi-param-style :comma-separated
+                          :path-params {:id (:id game)}
+                          :query-params {:startTimecode (str (:official-date game) "_000000")
+                                         :language "en"}}))
+        teams (->> game-data
+                   :body
+                   :liveData
+                   :boxscore
+                   :teams)
+        away (:away teams)
+        home (:home teams)
+        get-hit-stats (fn [team]
+                        (->> team
+                             :players
+                             vals
+                             (map (fn [player-stats]
+                                    {:player-id (:id (:person player-stats))
+                                     :batting-order (:battingOrder player-stats)
+                                     :batting-stats (let [stats (:batting (:stats player-stats))]
+                                                      (when (and stats (:plateAppearances stats) (> (:plateAppearances stats) 0))
+                                                        {:hits (:hits stats)
+                                                         :plate-appearances (:plateAppearances stats)}))}))))
+        stats (concat (get-hit-stats away) (get-hit-stats home))]
+    {:game-id (:id game)
+     :outcomes (into [] stats)}))
+
+(defn hydrate-hits
+  [ds schedule]
+  (log/debug :hydrate/starting :hits)
+  (let [game-outcomes (->> schedule
+                           :games
+                           (map (fn [game]
+                                  {:id (:gamePk game)
+                                   :official-date (:officialDate game)}))
+                           (pmap hydrate-hits-get-game-outcomes)
+                           doall
+                           (into []))]
+    (->> game-outcomes
+         (reduce
+          (fn [acc cur]
+            (let [game-outcomes (mapv
+                                 (fn [outcome]
+                                   {:game-id (:game-id cur)
+                                    :player-id (:player-id outcome)
+                                    :batting-order (:batting-order outcome)
+                                    :hits (:hits (:batting-stats outcome))
+                                    :plate-appearances (:plate-appearances (:batting-stats outcome))})
+                                 (:outcomes cur))]
+              (concat acc game-outcomes)))
+          [])
+         (game-outcome/upsert-batch ds))
+    (log/debug :hydrate/finished :hits)
+    game-outcomes))
+
 (defn hydrate-probable-pitchers
   [ds schedule]
   (log/debug :hydrate/starting :probable-pitchers)
@@ -713,4 +773,12 @@
       (hydrate-probable-pitchers ds schedule)
       (let [matchups (game/get-matchups-by-date ds date)]
         (hydrate-batters-vs-pitchers ds matchups)))
+    ;; Gather historic data
+    (let [yesterday (-> date
+                        date-util/parse-date
+                        (.minusDays 1)
+                        date-util/format-date)]
+      ; TODO smarter about this - but for now only record hits if we hydrated yesterday
+      (when-not (empty? (game/get-by-date ds yesterday))
+        (hydrate-hits ds (hydrate-games ds yesterday))))
     (log/info :hydrate/finished {})))

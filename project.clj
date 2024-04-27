@@ -6,7 +6,7 @@
   :license {:name "apache-2.0"
             :url "https://www.apache.org/licenses/LICENSE-2.0"}
   :dependencies [[org.clojure/clojure "1.11.1"]
-                 [dev.russell/batboy "0.2.0"]
+                 [dev.russell/batboy "0.3.0"]
                  [com.github.seancorfield/next.jdbc "1.2.780"]
                  [org.postgresql/postgresql "42.3.4"]
                  [migratus "1.3.6"]

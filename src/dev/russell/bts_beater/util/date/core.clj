@@ -16,6 +16,10 @@
   [year month day]
   (java-time/local-date (->int year) (->int month) (->int day)))
 
+(defn parse-date
+  [date-str]
+  (LocalDate/parse date-str))
+
 (defn format-date
   [date]
   (cond
